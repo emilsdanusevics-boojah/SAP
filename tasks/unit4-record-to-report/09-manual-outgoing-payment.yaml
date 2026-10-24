@@ -6,9 +6,17 @@ requires: [IEE2E-07]
 steps:
   # 1. Vendor invoice
   - openApp: { title: Create Supplier Invoice }
+  - name: Start fresh if a draft from an earlier attempt is offered
+    optional: true
+    timeout: 8000
+    click: { text: "No", dialog: true, role: button }
   - select: { label: Transaction, value: Invoice }
+  - fill: { Company Code: "1010" }
+  - name: Confirm "Data Will Be Lost" (left over from an earlier draft)
+    optional: true
+    timeout: 4000
+    click: { text: OK, dialog: true, role: button }
   - fill:
-      Company Code: "1010"
       Invoice Date: ${today}
       Posting Date: ${today}
   - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
@@ -20,10 +28,8 @@ steps:
   - click: { text: Add, within: G/L Account Items }
   - fillCell: { within: G/L Account Items, row: 1, column: G/L Account, value: "65100${grp}" }
   - fillCell: { within: G/L Account Items, row: 1, column: Amount, value: "1000" }
-  - click: Show Details
-  - fill:
-      Tax Code: 1I
-      Cost Center: BIKEA-${grp}
+  - fillCell: { within: G/L Account Items, row: 1, column: Tax Code, value: 1I }
+  - fillCell: { within: G/L Account Items, row: 1, column: Cost Center, value: "BIKEA-${grp}" }
   - click: Post
   - expectMessage:
       regex: "created|posted"

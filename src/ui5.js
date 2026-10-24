@@ -7,6 +7,10 @@
 const MESSAGE_SELECTORS = [
   '.sapMMessageToast',
   '.sapMMessageBox',
+  // sap.m.Dialog with a state ("Success: Documents have been created ..."), e.g. Create Supplier Invoice.
+  '[role="dialog"][class*="sapMDialogSuccess"]',
+  '[role="dialog"][class*="sapMDialogError"]',
+  '[role="dialog"][class*="sapMDialogWarning"]',
   '.sapMMsgStrip',
   '.sapMMessagePopover',
   '.sapMMsgView',

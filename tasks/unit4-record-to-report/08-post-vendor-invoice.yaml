@@ -3,34 +3,68 @@ exercise: 8
 title: "Post a Vendors Invoice and Analyze the Impact"
 tags: [unit4, fi-ap, posting]
 requires: [IEE2E-07]
+description: >
+  Posts supplier invoice 1 (2,200 EUR). Not posted again when apInvoice1 was captured by an earlier run.
 steps:
-  - openApp: { title: Create Supplier Invoice }
-  - fill:
-      Company Code: "1010"
-      Invoice Date: ${today}
-  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
-  - fill:
+  - unless: "${apInvoice1}"
+    openApp: { title: Create Supplier Invoice }
+  - unless: "${apInvoice1}"
+    name: Start fresh if a draft from an earlier attempt is offered
+    optional: true
+    timeout: 8000
+    click: { text: "No", dialog: true, role: button }
+  - unless: "${apInvoice1}"
+    fill: { Company Code: "1010" }
+  - unless: "${apInvoice1}"
+    name: Confirm "Data Will Be Lost" (left over from an earlier draft)
+    optional: true
+    timeout: 4000
+    click: { text: OK, dialog: true, role: button }
+  - unless: "${apInvoice1}"
+    fill: { Invoice Date: "${today}" }
+  - unless: "${apInvoice1}"
+    select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - unless: "${apInvoice1}"
+    fill:
       Gross Invoice Amount: "2200"
       Currency: EUR
       Reference: ${grp}
-  - press: Enter
-  - name: Re-check if the reference is reported as duplicate
+  - unless: "${apInvoice1}"
+    press: Enter
+  - unless: "${apInvoice1}"
+    name: Re-check if the reference is reported as duplicate
     optional: true
     timeout: 3000
     click: Check
-  - fillCell: { within: G/L Account Items, row: 1, column: G/L Account, value: "65100${grp}" }
-  - fillCell: { within: G/L Account Items, row: 1, column: Amount, value: "2000" }
-  - click: Show Details
-  - fill:
-      Tax Code: 1I
-      Cost Center: BIKEA-${grp}
-  - click: Check
-  - expectMessage: successfully checked
-  - click: Post
-  - expectMessage:
+  - unless: "${apInvoice1}"
+    name: Close the messages popover
+    optional: true
+    press: Escape
+  - unless: "${apInvoice1}"
+    click: { text: G/L Account Items, role: tab }
+  - unless: "${apInvoice1}"
+    click: { text: Add, within: G/L Account Items }
+  - unless: "${apInvoice1}"
+    fillCell: { within: G/L Account Items, row: 1, column: G/L Account, value: "65100${grp}" }
+  - unless: "${apInvoice1}"
+    fillCell: { within: G/L Account Items, row: 1, column: Amount, value: "2000" }
+  - unless: "${apInvoice1}"
+    fillCell: { within: G/L Account Items, row: 1, column: Tax Code, value: 1I }
+  - unless: "${apInvoice1}"
+    fillCell: { within: G/L Account Items, row: 1, column: Cost Center, value: "BIKEA-${grp}" }
+  - unless: "${apInvoice1}"
+    click: Check
+  - unless: "${apInvoice1}"
+    expectMessage: successfully checked
+  - unless: "${apInvoice1}"
+    click: Post
+  - unless: "${apInvoice1}"
+    expectMessage:
       regex: "created|posted"
       capture: { var: apInvoice1, regex: "(\\d{9,10})" }
   - name: Do not enter another invoice
+    optional: true
+    timeout: 8000
     click: { text: "No", dialog: true }
 
   - openApp: { title: Display Supplier Balances }

@@ -84,6 +84,10 @@ async function fillOne(ctx, a) {
     await settle(ctx.page, ctx.stepTimeout);
     return;
   }
+  // Re-entering a value a field already shows ("1010 (DE Company Code)") can reset the form.
+  const current = String((await field.inputValue().catch(() => null)) ?? '').trim();
+  const value = String(a.value ?? '');
+  if (value && !a.enter && (current === value || current.startsWith(`${value} (`))) return;
   await typeInto(ctx, field, a);
 }
 
@@ -133,6 +137,22 @@ const inputValue = (cell) =>
 
 // row: 1-based data row, negative counts from the end; rowContains: first row with that text;
 // firstEmpty: true -> first row whose input in this column is empty (new item lines in GUI tables).
+// Grid tables: the header row owns its column headers via aria-owns instead of containing them.
+const isHeaderRow = (r) =>
+  r.evaluate((e) =>
+    (e.getAttribute('aria-owns') || '')
+      .split(/\s+/)
+      .some((id) => id && document.getElementById(id)?.getAttribute('role') === 'columnheader')
+  );
+
+// The n-th data row (1-based; negative counts from the end), skipping header rows.
+async function nthDataRow(rows, n) {
+  const data = [];
+  const count = await rows.count();
+  for (let i = 0; i < count; i++) if (!(await isHeaderRow(rows.nth(i)).catch(() => false))) data.push(rows.nth(i));
+  return data[n < 0 ? data.length + n : n - 1] || rows.nth(count + 1000);
+}
+
 async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within, dialog }) {
   const deadline = Date.now() + ctx.stepTimeout;
   let seen = [];
@@ -157,11 +177,7 @@ async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within,
         for (let i = 0; i < n; i++) if ((await inputValue(cellOf(rows.nth(i)))) === '') return cellOf(rows.nth(i));
         continue;
       }
-      const r = rowContains
-        ? rows.filter({ hasText: rowContains }).first()
-        : row < 0
-          ? rows.nth((await rows.count()) + row)
-          : rows.nth(row - 1);
+      const r = rowContains ? rows.filter({ hasText: rowContains }).first() : await nthDataRow(rows, row);
       if (!(await r.count())) continue;
       return cellOf(r);
     }
