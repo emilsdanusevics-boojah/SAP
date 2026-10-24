@@ -530,15 +530,24 @@ const actions = {
   // Roles already assigned are skipped, so the step can be re-run safely.
   async assignBusinessRoles(ctx, a) {
     const add = [].concat(a.add || []);
-    const section = a.section || 'Assigned Business Roles';
-    const user = a.user || ctx.cfg.user;
+    // The tenant titles it "Business Roles Assigned (29)"; older releases "Assigned Business Roles".
+    const section = a.section || /^(Assigned Business Roles|Business Roles Assigned)(\s*\(\d+\))?$/;
+    const user = a.user || ctx.cfg.businessUser;
     if (!user) throw new Error('assignBusinessRoles needs SAP_USER');
 
     await actions.openApp(ctx, { title: a.app || 'Maintain Business Users' });
     await fillOne(ctx, { label: 'Search', value: user, enter: true });
     await softClick(ctx, 'Go');
     await actions.openRow(ctx, user);
-    await actions.click(ctx, 'Edit');
+    // A draft left by an earlier run opens straight in edit mode (Save shown, no Edit).
+    const mode = await locate(ctx.page, [...clickBuilders('Edit', 'button'), ...clickBuilders('Save', 'button')], {
+      timeout: ctx.stepTimeout,
+      what: 'Edit or Save',
+    });
+    if ((await mode.innerText().catch(() => '')).trim() === 'Edit') {
+      await mode.click();
+      await settle(ctx.page, ctx.stepTimeout);
+    }
 
     const area = await sectionLocator(ctx.page, section);
     const areaText = await area.innerText({ timeout: ctx.stepTimeout });
@@ -546,18 +555,25 @@ const actions = {
     if (a.removeOthers) {
       const keep = [PROTECTED_ROLE, ...add, ...[].concat(a.keep || [])];
       const rows = area.getByRole('row').filter({ hasNot: area.getByRole('columnheader') });
-      let removed = 0;
-      for (let i = 0; i < (await rows.count()); i++) {
-        const text = await rows.nth(i).innerText();
-        if (!text.trim() || keep.some((k) => text.includes(k))) continue;
-        if (text.includes(PROTECTED_ROLE)) continue; // belt and braces
-        await tickRow(rows.nth(i));
-        removed++;
+      // Rows must show role IDs to match `keep`; a table listing only names could lose the generic role.
+      if (!/\b(BR|Z|SAP_BR)_[A-Z0-9_]+/.test(areaText.replace(PROTECTED_ROLE, ''))) {
+        ctx.log.warn('  roles are listed by name only - skipped removing other roles');
+      } else {
+        let removed = 0;
+        for (let i = 0; i < (await rows.count()); i++) {
+          const text = await rows.nth(i).innerText();
+          if (!text.trim() || keep.some((k) => text.includes(k))) continue;
+          if (text.includes(PROTECTED_ROLE) || /generic role/i.test(text)) continue; // belt and braces
+          await tickRow(rows.nth(i));
+          removed++;
+        }
+        if (removed) await actions.click(ctx, { text: 'Remove', within: section });
+        ctx.log.info(`  removed ${removed} other role(s); kept ${PROTECTED_ROLE}`);
       }
-      if (removed) await actions.click(ctx, { text: 'Remove', within: section });
-      ctx.log.info(`  removed ${removed} other role(s); kept ${PROTECTED_ROLE}`);
     }
 
+    // The Add dialog only offers roles the user does not have yet.
+    const added = [];
     for (const role of add) {
       if (areaText.includes(role)) {
         ctx.log.info(`  ${role} already assigned`);
@@ -571,16 +587,26 @@ const actions = {
       );
       await search.fill(role);
       await search.press('Enter');
+      const go = await locate(ctx.page, clickBuilders('Go', 'button'), { timeout: 2000, what: 'Go', dialogOnly: true }).catch(() => null);
+      if (go) await go.click();
       await settle(ctx.page, ctx.stepTimeout);
-      await tickRow(await findRow(ctx, { contains: role, dialog: true }));
+      const row = await locate(ctx.page, rowBuilders(role), { timeout: 5000, what: role, dialogOnly: true }).catch(() => null);
+      if (!row) {
+        ctx.log.info(`  ${role} not offered in Add - already assigned`);
+        await actions.click(ctx, { text: 'Cancel', dialog: true, role: 'button' });
+        continue;
+      }
+      const name = ((await row.innerText().catch(() => '')).split(/\t|\n/).map((t) => t.trim()).filter(Boolean)[0]) || role;
+      await tickRow(row);
       await actions.click(ctx, { text: ['OK', 'Ok'], dialog: true, role: 'button' });
+      added.push({ role, name });
     }
 
     await actions.click(ctx, 'Save');
     // Saved = back in display mode (Edit visible again); only then leave the page.
     await locate(ctx.page, clickBuilders('Edit', 'button'), { timeout: ctx.stepTimeout, what: 'display mode after Save' });
     await actions.expectNoError(ctx);
-    for (const role of add) await actions.expectText(ctx, { text: role, within: section });
+    for (const { name } of added) await actions.expectText(ctx, { text: name, within: section });
     await actions.home(ctx);
     await actions.refresh(ctx);
   },

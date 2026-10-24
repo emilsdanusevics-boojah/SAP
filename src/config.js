@@ -27,6 +27,8 @@ function getConfig(cli = {}) {
   return {
     baseUrl: (env.SAP_BASE_URL || 'https://my414802.s4hana.cloud.sap').replace(/\/+$/, ''),
     user,
+    // The SAP user name (e.g. F030650) when you log on with an e-mail address instead.
+    businessUser: env.SAP_BUSINESS_USER || user,
     password: env.SAP_PASSWORD || '',
     // The course's "###": explicit, or the last three digits of the user (F000035 -> 035).
     group: env.SAP_GROUP || (user.match(/(\d{3})$/) || [])[1] || '',

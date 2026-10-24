@@ -86,7 +86,7 @@ function resolveToken(token, vars, cfg) {
   if (name === 'num') return String(args[0]).replace('.', cfg.decimal);
   if (name === 'rand') return String(Math.floor(100000 + Math.random() * 900000));
   if (name === 'timestamp') return new Date().toISOString().replace(/\D/g, '').slice(0, 14);
-  if (name === 'user') return cfg.user;
+  if (name === 'user') return cfg.businessUser || cfg.user;
   if (name === 'grp') {
     if (!cfg.group) throw new Error('${grp} needs SAP_GROUP (e.g. 035) or a SAP_USER ending in 3 digits');
     return cfg.group;

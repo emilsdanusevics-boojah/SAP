@@ -29,6 +29,9 @@ cp .env.example .env      # then set SAP_USER, SAP_PASSWORD, and check SAP_GROUP
 
 - **`SAP_GROUP`** is the course's `###`. Leave it empty to use the last three digits
   of the user (for example, `F000035` gives `035`).
+- **`SAP_BUSINESS_USER`**: only if you log on with an e-mail address. Set it to your SAP
+  user name (for example `F030650`); it is used to find you in Maintain Business Users
+  and for `${user}`.
 - **`SAP_DATE_FORMAT`** and **`SAP_DECIMAL`** must match your SAP user settings.
   The default is `DD.MM.YYYY` with a comma as the decimal separator.
 - Credentials and the saved login session stay local, in `.env` and `.state/`.
