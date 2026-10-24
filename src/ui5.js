@@ -108,8 +108,10 @@ async function searchScopes(page, { frame = 'auto', dialogOnly = false, within }
   if (frame !== 'app' || !app) frames.push(page.mainFrame());
   const scopes = [];
   for (const f of frames) {
+    // Every open dialog, the most recent first (another, inactive dialog can also be in the DOM).
     const dialogs = f.locator('[role="dialog"]:visible, [role="alertdialog"]:visible');
-    if ((await dialogs.count().catch(() => 0)) > 0) scopes.push(dialogs.last());
+    const n = await dialogs.count().catch(() => 0);
+    for (let i = n - 1; i >= 0; i--) scopes.push(dialogs.nth(i));
     if (!dialogOnly) scopes.push(f);
   }
   if (!within) return scopes;
@@ -184,7 +186,8 @@ function fieldBuildersFor(label) {
     (s) => s.getByPlaceholder(label, { exact: true }),
     (s) => s.getByTitle(label, { exact: true }).locator('xpath=self::input|self::textarea'),
     // WebGUI / plain layouts: input that follows a text node equal to the label.
-    (s) => s.locator(`xpath=//*[normalize-space(text())=${xpLabel}]/following::input[not(@type="hidden")][1]`),
+    // Unlinked labels (e.g. in dialogs) whose text carries the colon: "Project Name:".
+    (s) => s.locator(`xpath=//*[normalize-space(text())=${xpLabel} or normalize-space(text())=concat(${xpLabel}, ":")]/following::input[not(@type="hidden")][1]`),
     (s) => s.getByLabel(label),
   ];
 }

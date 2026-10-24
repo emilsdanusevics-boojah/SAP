@@ -3,46 +3,107 @@ exercise: 20
 title: "Manage WBS elements (trade fair projects)"
 tags: [unit4, co, projects]
 requires: [IEE2E-15]
+description: >
+  Creates project Fair Paris ### and copies it to Fair Singapore ### and Fair Atlanta ###.
+  A project that exists already is not created again.
 steps:
   - openApp: { title: Project Control - Enterprise Projects }
-  - click: Create
-  - fill:
+
+  # Fair Paris
+  - fill: { label: Search, value: "FAIRPAR${grp}", enter: true }
+  - click: Go
+  - name: FAIRPAR${grp} there already?
+    detect: { row: "FAIRPAR${grp}", var: parExists }
+  - unless: "${parExists}"
+    click: Create
+  - unless: "${parExists}"
+    fill:
       Project Name: Fair Paris ${grp}
       Project ID: FAIRPAR${grp}
-  - select: { label: Project Profile, value: Overhead Project }
-  - fill:
+  - unless: "${parExists}"
+    select: { label: Project Profile, value: Overhead Project }
+  - unless: "${parExists}"
+    fill:
       Planned Start: ${yearStart}
       Planned Finish: ${yearEnd}
       Responsible Cost Center: MAR-${grp}
       Profit Center: P9${grp}
       Project Currency: EUR
-  - click: Create
-  - expectNoError: true
-  - click: Back
+  - unless: "${parExists}"
+    click: Create
+  - unless: "${parExists}"
+    expectNoError: true
+  - unless: "${parExists}"
+    click: Back
 
-  - fill: { label: Search, value: "FAIRPAR${grp}", enter: true }
-  - selectRow: Fair Paris ${grp}
-  - click: Copy
-  - fill:
+  # Fair Singapore (copy of Fair Paris)
+  - fill: { label: Search, value: "FAIRSIN${grp}", enter: true }
+  - click: Go
+  - name: FAIRSIN${grp} there already?
+    detect: { row: "FAIRSIN${grp}", var: sinExists }
+  - unless: "${sinExists}"
+    fill: { label: Search, value: "FAIRPAR${grp}", enter: true }
+  - unless: "${sinExists}"
+    click: Go
+  - unless: "${sinExists}"
+    selectRow: Fair Paris ${grp}
+  - unless: "${sinExists}"
+    click: Copy
+  - unless: "${sinExists}"
+    fill:
       dialog: true
       fields:
         Project Name: Fair Singapore ${grp}
         Project ID: FAIRSIN${grp}
         Planned Start: ${yearStart}
-  - click: { text: Copy, dialog: true }
-  - click: Create
-  - expectNoError: true
-  - click: Back
+  - unless: "${sinExists}"
+    click: { text: Copy, dialog: true }
+  - name: Create (if the copy opens as a new draft)
+    unless: "${sinExists}"
+    optional: true
+    timeout: 8000
+    click: Create
+  - unless: "${sinExists}"
+    expectNoError: true
+  - unless: "${sinExists}"
+    optional: true
+    timeout: 5000
+    click: Back
 
-  - fill: { label: Search, value: "FAIRPAR${grp}", enter: true }
-  - selectRow: Fair Paris ${grp}
-  - click: Copy
-  - fill:
+  # Fair Atlanta (copy of Fair Paris)
+  - fill: { label: Search, value: "FAIRATL${grp}", enter: true }
+  - click: Go
+  - name: FAIRATL${grp} there already?
+    detect: { row: "FAIRATL${grp}", var: atlExists }
+  - unless: "${atlExists}"
+    fill: { label: Search, value: "FAIRPAR${grp}", enter: true }
+  - unless: "${atlExists}"
+    click: Go
+  - unless: "${atlExists}"
+    selectRow: Fair Paris ${grp}
+  - unless: "${atlExists}"
+    click: Copy
+  - unless: "${atlExists}"
+    fill:
       dialog: true
       fields:
         Project Name: Fair Atlanta ${grp}
         Project ID: FAIRATL${grp}
         Planned Start: ${yearStart}
-  - click: { text: Copy, dialog: true }
-  - click: Create
-  - expectNoError: true
+  - unless: "${atlExists}"
+    click: { text: Copy, dialog: true }
+  - name: Create (if the copy opens as a new draft)
+    unless: "${atlExists}"
+    optional: true
+    timeout: 8000
+    click: Create
+  - unless: "${atlExists}"
+    expectNoError: true
+
+  # All three exist
+  - openApp: { title: Project Control - Enterprise Projects }
+  - fill: { label: Search, value: "FAIR*${grp}", enter: true }
+  - click: Go
+  - expectText: FAIRPAR${grp}
+  - expectText: FAIRSIN${grp}
+  - expectText: FAIRATL${grp}
