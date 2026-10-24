@@ -165,7 +165,12 @@ async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within,
       if (names.length) seen = names;
       const wanted = alternatives(column).map((c) => c.toLowerCase());
       const col = names.findIndex((n) => wanted.includes(n.toLowerCase()));
-      if (col < 0) continue;
+      if (col < 0) {
+        // Responsive tables move columns that do not fit into a pop-in row below each item.
+        const popin = await popinField(scope, { row, rowContains, column });
+        if (popin) return popin;
+        continue;
+      }
       const ariaCol = await headers.nth(col).getAttribute('aria-colindex');
       const rows = scope
         .locator(':is([role="row"], tbody tr):not(:has([role="columnheader"], th))')
@@ -204,6 +209,22 @@ async function labelledItemField(scope, { row = 1, rowContains, column }) {
   if (!(await item.count())) return null;
   for (const build of fieldBuilders(labels)) {
     const f = build(item).filter({ visible: true }).first();
+    if ((await f.count().catch(() => 0)) > 0) return f;
+  }
+  return null;
+}
+
+// The field labelled `column` in the pop-in (sub-row) of the n-th row of a responsive table.
+async function popinField(scope, { row = 1, rowContains, column }) {
+  let rows = scope.locator('tr.sapMLIB:not(.sapMListTblSubRow):not(:has(th))').filter({ visible: true });
+  if (rowContains) rows = rows.filter({ hasText: rowContains });
+  const n = await rows.count().catch(() => 0);
+  if (!n) return null;
+  const r = rowContains ? rows.first() : rows.nth(row < 0 ? n + row : row - 1);
+  const sub = r.locator('xpath=following-sibling::tr[1][contains(concat(" ", @class, " "), " sapMListTblSubRow ")]');
+  if (!(await sub.count().catch(() => 0))) return null;
+  for (const build of fieldBuilders(alternatives(column))) {
+    const f = build(sub).filter({ visible: true }).first();
     if ((await f.count().catch(() => 0)) > 0) return f;
   }
   return null;

@@ -3,36 +3,77 @@ exercise: 19
 title: "Post an activity allocation"
 tags: [unit4, co, posting]
 requires: [IEE2E-15, IEE2E-17, IEE2E-18]
+description: >
+  Direct activity allocation from 10101753 / IT### to MAN-### (20 h) and MAR-### (10 h). Not posted
+  again when allocJE was captured by an earlier run.
 steps:
-  - openApp: { title: Manage Direct Activity Allocation }
-  - click: Create
-  - optional: true
+  - unless: "${allocJE}"
+    openApp: { title: Manage Direct Activity Allocation }
+  - unless: "${allocJE}"
+    click: Create
+  - unless: "${allocJE}"
+    optional: true
     click: Full Screen
-  - fill:
+  - unless: "${allocJE}"
+    fill:
       Document Header Text: ${grp}_Direct Activity Alloc
       Journal Entry Date: ${today}
       Posting Date: ${today}
       Translation Date: ${today}
       Journal Entry Type: CO
-  - fillCell: { within: Allocation Items, row: 1, column: Sender Cost Center, value: "10101753" }
-  - fillCell: { within: Allocation Items, row: 1, column: Sender Activity Type, value: "IT${grp}" }
-  - fillCell: { within: Allocation Items, row: 1, column: Receiver Cost Center, value: "MAN-${grp}" }
-  - fillCell: { within: Allocation Items, row: 1, column: Quantity, value: "20", enter: true }
-  - expectText: "94311000"
-  - name: Add a second allocation row (Create in the Allocation Items toolbar, not the footer)
+  - name: Show More per Row (reveals Quantity and the other hidden columns)
+    unless: "${allocJE}"
+    optional: true
+    timeout: 5000
+    click: { text: Show More per Row, within: Allocation Items }
+  - unless: "${allocJE}"
+    fillCell: { within: Allocation Items, row: 1, column: Sender Cost Center, value: "10101753" }
+  - unless: "${allocJE}"
+    fillCell: { within: Allocation Items, row: 1, column: Sender Activity Type, value: "IT${grp}" }
+  - unless: "${allocJE}"
+    fillCell: { within: Allocation Items, row: 1, column: Receiver Cost Center, value: "MAN-${grp}" }
+  - name: Close the WBS element suggestions
+    unless: "${allocJE}"
+    optional: true
+    press: Escape
+  - unless: "${allocJE}"
+    fillCell: { within: Allocation Items, row: 1, column: Quantity, value: "20", enter: true }
+  - unless: "${allocJE}"
+    expectText: "94311000"
+  - unless: "${allocJE}"
+    name: Add a second allocation row (Create in the Allocation Items toolbar, not the footer; it is inserted at the top)
     click: { text: Create, within: Allocation Items }
-  - fillCell: { within: Allocation Items, row: 2, column: Sender Cost Center, value: "10101753" }
-  - fillCell: { within: Allocation Items, row: 2, column: Sender Activity Type, value: "IT${grp}" }
-  - fillCell: { within: Allocation Items, row: 2, column: Receiver Cost Center, value: "MAR-${grp}" }
-  - fillCell: { within: Allocation Items, row: 2, column: Quantity, value: "10", enter: true }
-  - name: Save with Create in the footer
+  - unless: "${allocJE}"
+    fillCell: { within: Allocation Items, row: 1, column: Sender Cost Center, value: "10101753" }
+  - unless: "${allocJE}"
+    fillCell: { within: Allocation Items, row: 1, column: Sender Activity Type, value: "IT${grp}" }
+  - unless: "${allocJE}"
+    fillCell: { within: Allocation Items, row: 1, column: Receiver Cost Center, value: "MAR-${grp}" }
+  - name: Close the WBS element suggestions
+    unless: "${allocJE}"
+    optional: true
+    press: Escape
+  - unless: "${allocJE}"
+    fillCell: { within: Allocation Items, row: 1, column: Quantity, value: "10", enter: true }
+  - unless: "${allocJE}"
+    name: Save with Create in the footer
     click: { text: Create, index: -1 }
-  - expectText: Journal Entr
-  - screenshot: allocation-posted
+  - unless: "${allocJE}"
+    expectMessage:
+      regex: "posted|created|\\d{9,10}"
+      capture: { var: allocJE, regex: "(\\d{9,10})" }
+  - unless: "${allocJE}"
+    screenshot: allocation-posted
 
   - openApp: { title: Cost Centers Plan/Actual }
-  - fill:
-      Plan Category: ACT01
-      Cost Center: "10101753"
+  - name: Close "New Version Available"
+    optional: true
+    timeout: 8000
+    click: { text: Close, dialog: true }
+  - name: Plan Category ACT01 (not in the default filter bar)
+    optional: true
+    timeout: 5000
+    fill: { Plan Category: ACT01 }
+  - fill: { Cost Center: "10101753" }
   - click: Go
   - manual: Drag Activity Type below Cost Center in the navigation panel and check the IT${grp} allocations.
