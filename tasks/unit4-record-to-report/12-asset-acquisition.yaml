@@ -3,37 +3,74 @@ exercise: 12
 title: "Post and Analyze Asset Acquisition"
 tags: [unit4, fi-aa, posting]
 requires: [IEE2E-07, IEE2E-11]
+description: >
+  Asset acquisition by supplier invoice (40,000 EUR + tax). Not posted again when assetInvoice was
+  captured by an earlier run.
 steps:
-  - openApp: { title: Create Supplier Invoice }
-  - fill:
-      Company Code: "1010"
+  - unless: "${assetInvoice}"
+    openApp: { title: Create Supplier Invoice }
+  - unless: "${assetInvoice}"
+    name: Start fresh if a draft from an earlier attempt is offered
+    optional: true
+    timeout: 8000
+    click: { text: "No", dialog: true, role: button }
+  - unless: "${assetInvoice}"
+    fill: { Company Code: "1010" }
+  - unless: "${assetInvoice}"
+    name: Confirm "Data Will Be Lost" (left over from an earlier draft)
+    optional: true
+    timeout: 4000
+    click: { text: OK, dialog: true, role: button }
+  - unless: "${assetInvoice}"
+    fill:
       Invoice Date: ${on(1, 7)}
       Posting Date: ${today}
       Reference: CNC Lathe ${grp}
       Gross Invoice Amount: "44000"
       Currency: EUR
-  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
-  - click: Show More
-  - fill: { Text: "CNC Lathe ${grp}" }
-  - click: { text: Asset Items, role: tab }
-  - click: { text: Add, within: Asset Items }
-  - fillCell: { within: Asset Items, row: 1, column: Asset, value: "${assetNo}" }
-  - fillCell: { within: Asset Items, row: 1, column: Amount, value: "40000" }
-  - fillCell: { within: Asset Items, row: 1, column: Tax Code, value: 1I }
-  - fillCell: { within: Asset Items, row: 1, column: Asset Value Date, value: "${on(1, 7)}" }
-  - click: Simulate
-  - name: Accept warnings
+  - unless: "${assetInvoice}"
+    select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - unless: "${assetInvoice}"
+    name: Show More (header text)
+    optional: true
+    timeout: 5000
+    click: Show More
+  - unless: "${assetInvoice}"
+    fill: { Text: "CNC Lathe ${grp}" }
+  - unless: "${assetInvoice}"
+    click: { text: Asset Items, role: tab }
+  - unless: "${assetInvoice}"
+    click: { text: Add, within: Asset Items }
+  - unless: "${assetInvoice}"
+    fillCell: { within: Asset Items, row: 1, column: Asset, value: "${assetNo}" }
+  - unless: "${assetInvoice}"
+    fillCell: { within: Asset Items, row: 1, column: Amount, value: "40000" }
+  - unless: "${assetInvoice}"
+    fillCell: { within: Asset Items, row: 1, column: Tax Code, value: 1I }
+  - unless: "${assetInvoice}"
+    fillCell: { within: Asset Items, row: 1, column: Asset Value Date, value: "${on(1, 7)}" }
+  - unless: "${assetInvoice}"
+    click: Simulate
+  - unless: "${assetInvoice}"
+    name: Accept warnings
     optional: true
     timeout: 3000
     click: { text: [Continue, OK, Ok], dialog: true }
-  - expectText: "16002000"
-  - click: Post
-  - expectMessage:
+  - unless: "${assetInvoice}"
+    expectText: "16002000"
+  - unless: "${assetInvoice}"
+    click: Post
+  - unless: "${assetInvoice}"
+    expectMessage:
       regex: "created|posted"
       capture: { var: assetInvoice, regex: "(\\d{9,10})" }
-  - click: { text: "No", dialog: true }
+  - name: Do not enter another invoice
+    optional: true
+    timeout: 8000
+    click: { text: "No", dialog: true }
 
   - openApp: { title: Manage Fixed Assets }
+  - fill: { Asset Description: "CNC lathe ${grp}" }
   - click: Go
   - openRow: ${assetNo}
   - screenshot: asset-ledger-area
