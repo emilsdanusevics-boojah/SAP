@@ -1,0 +1,57 @@
+id: IEE2E-04
+exercise: 4
+title: "Post a General Journal Entry"
+tags: [unit4, fi, posting]
+requires: [IEE2E-03]
+steps:
+  # 1. Cash receipt on bank account (incoming checks)
+  - openApp: { title: Post General Journal Entries }
+  - fill:
+      Journal Entry Date: ${today}
+      Posting Date: ${today}
+      Journal Entry Type: SA
+      Company Code: "1010"
+      Transaction Currency: EUR
+  - fillCell: { within: Line Items, row: 1, column: G/L Account, value: "10010000" }
+  - fillCell: { within: Line Items, row: 1, column: Debit, value: "500" }
+  - fillCell: { within: Line Items, row: 2, column: G/L Account, value: "11002000" }
+  - fillCell: { within: Line Items, row: 2, column: Credit, value: "500", enter: true }
+  - name: Value Date (mandatory for 11002000)
+    optional: true
+    fill: { Value Date: "${today}" }
+  - click: Simulate
+  - click: Post
+  - expectMessage:
+      regex: "posted|\\d{10}"
+      capture: { var: jeCashReceipt, regex: "(\\d{10})" }
+  - click: Back
+
+  # 2. Cash payment of office supplies with 10% input tax, plus a note
+  - fill:
+      Journal Entry Date: ${today}
+      Posting Date: ${today}
+      Journal Entry Type: SA
+      Company Code: "1010"
+      Transaction Currency: EUR
+  - fillCell: { within: Line Items, row: 1, column: G/L Account, value: "65100${grp}" }
+  - fillCell: { within: Line Items, row: 1, column: Debit, value: "1${grp}" }
+  - name: Expand line item 1 details (>)
+    click: { inRow: "65100${grp}", role: button, index: 0 }
+  - fill:
+      Item Text: Simple post ${grp}
+      Tax Code: 1I
+      Cost Center: BIKEA-${grp}
+  - fillCell: { within: Line Items, row: 2, column: G/L Account, value: "10010000" }
+  - fillCell: { within: Line Items, row: 2, column: Credit, value: "1${grp}" }
+  - check: Calculate Tax
+  - uncheck: Net Entry
+  - click: Simulate
+  - expectText: 1I
+  - click: Post
+  - expectMessage:
+      regex: "posted|\\d{10}"
+      capture: { var: jeOfficeSupplies, regex: "(\\d{10})" }
+  - click: Notes
+  - fill: { selector: "textarea", value: Urgent }
+  - click: [Submit, Post, Send]
+  - expectText: Urgent

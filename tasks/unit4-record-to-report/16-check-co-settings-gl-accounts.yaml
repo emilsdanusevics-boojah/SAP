@@ -1,0 +1,21 @@
+id: IEE2E-16
+exercise: 16
+title: "Check Controlling Settings of Cost G/L Accounts"
+tags: [unit4, co, master-data]
+description: Read-only check. Display mode only; the guide's Edit/Cancel to peek at the value help is skipped.
+steps:
+  - openApp: { title: Manage G/L Account Master Data }
+  - fill:
+      Chart of Accounts: YCOA
+      G/L Account: 65100${grp}
+  - click: Go
+  - openRow: 65100${grp}
+  - expectText: Primary Costs or Revenue
+  - capture: { var: costElemCat_65100, from: field, label: Cost Element Category }
+  - click: Back
+  - clear: G/L Account
+  - fill: { G/L Account: "94311000" }
+  - click: Go
+  - openRow: "94311000"
+  - expectText: Secondary Costs
+  - capture: { var: costElemCat_94311000, from: field, label: Cost Element Category }

@@ -1,0 +1,34 @@
+id: IEE2E-03
+exercise: 3
+title: "Create GL Account (copy 65100000 to 65100###)"
+tags: [unit4, fi, master-data]
+vars:
+  glAccount: 65100${grp}
+steps:
+  - openApp: { title: Manage G/L Account Master Data }
+  - fill:
+      Chart of Accounts: YCOA
+      G/L Account: "65100000"
+  - name: View = Chart of Accounts View
+    optional: true
+    select: { label: View, value: Chart of Accounts View }
+  - click: Go
+  - selectRow: "65100000"
+  - click: Copy
+  - fill:
+      dialog: true
+      fields:
+        G/L Account: ${glAccount}
+        Description: Office Supplies ${grp}
+  - selectRow: { contains: "1010", dialog: true }
+  - click: { text: Copy, dialog: true }
+  - name: Confirm "you will be informed when the creation is finished"
+    click: [OK, Ok]
+  - name: Give the background job time to finish
+    wait: 15000
+  - click: View Logs
+  - name: Open the latest log
+    optional: true
+    click: { inRow: G/L, role: button }
+  - expectText: { text: created }
+  - screenshot: log

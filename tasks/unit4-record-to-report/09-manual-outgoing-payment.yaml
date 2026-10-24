@@ -1,0 +1,60 @@
+id: IEE2E-09
+exercise: 9
+title: "Post a Manual Outgoing Payment"
+tags: [unit4, fi-ap, payment]
+requires: [IEE2E-07]
+steps:
+  # 1. Vendor invoice
+  - openApp: { title: Create Supplier Invoice }
+  - select: { label: Transaction, value: Invoice }
+  - fill:
+      Company Code: "1010"
+      Invoice Date: ${today}
+      Posting Date: ${today}
+  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - fill:
+      Gross Invoice Amount: "1100"
+      Currency: EUR
+      Reference: Invoice 02-${grp}
+  - click: { text: G/L Account Items, role: tab }
+  - click: { text: Add, within: G/L Account Items }
+  - fillCell: { within: G/L Account Items, row: 1, column: G/L Account, value: "65100${grp}" }
+  - fillCell: { within: G/L Account Items, row: 1, column: Amount, value: "1000" }
+  - click: Show Details
+  - fill:
+      Tax Code: 1I
+      Cost Center: BIKEA-${grp}
+  - click: Post
+  - expectMessage:
+      regex: "created|posted"
+      capture: { var: apInvoice2, regex: "(\\d{10})" }
+  - click: { text: "No", dialog: true }
+
+  # 2. Single payment
+  - openApp: { title: Manage Supplier Line Items }
+  - fill:
+      Supplier: IEE2E-${grp}
+      Company Code: "1010"
+  - select: { label: Status, value: Open Items }
+  - click: Go
+  - selectRow: Invoice 02-${grp}
+  - click: Create Single Payment
+  - click: { text: Create, dialog: true }
+  - name: Accept the payment proposal
+    optional: true
+    click: Accept
+  - expectMessage:
+      regex: "payment run"
+      capture: { var: singlePaymentRun, regex: "[Pp]ayment run\\s+(\\S+)" }
+  - optional: true
+    click: Back to Supplier Line Items Application
+
+  # 3. Check automatic payments
+  - openApp: { title: Manage Automatic Payments }
+  - fill:
+      Created By: ${user}
+      Company Code: "1010"
+  - click: Go
+  - click: { text: Payments Processed, role: tab }
+  - expectText: Payment Posted
+  - screenshot: payment-run

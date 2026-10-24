@@ -1,0 +1,24 @@
+id: IEE2E-26
+exercise: 26
+title: "Create Quantity Contract and Check Sources of Supply"
+tags: [unit6, mm, sourcing]
+requires: [IEE2E-25]
+steps:
+  - openApp: { title: Manage Supplier Quotations }
+  - fill: { RFQ: "${rfqNo}" }
+  - click: Go
+  - openRow: Awarded
+  - click: Follow-On Document
+  - click: Create Purchase Contract
+  - optional: true
+    fill: { Purchase Contract Name: "Quantity Contract ${grp}" }
+  - fillCell: { within: Items, row: 1, column: Target Quantity, value: "1000" }
+  - click: Create
+  - expectMessage:
+      regex: "\\d{10}"
+      capture: { var: contractNo, regex: "(\\d{10})" }
+
+  - openApp: { title: Manage Sources of Supply }
+  - fill: { Material: "R124-${grp}" }
+  - click: Go
+  - expectText: ${contractNo}

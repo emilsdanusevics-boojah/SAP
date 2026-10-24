@@ -1,15 +1,18 @@
 {
-  "name": "sap-fiori-task-tester",
+  "name": "sap-iee2e-exercise-tester",
   "version": "1.0.0",
-  "description": "Walks through SAP S/4HANA Cloud (Fiori) learning tasks described in YAML and reports pass/fail per step.",
+  "description": "Walks through the SAP IEE2E course exercises (S/4HANA Cloud, Fiori) and reports pass/fail per step.",
   "main": "run.js",
   "scripts": {
-    "test:tasks": "node run.js tasks",
-    "test:headed": "node run.js tasks --headed --slowmo 250",
-    "validate": "node run.js tasks --validate",
+    "test:all": "node run.js",
+    "test:headed": "node run.js --headed --slowmo 250 --interactive --pause-on-fail",
+    "validate": "node run.js --validate",
+    "state": "node run.js --show-state",
     "selftest": "node test/selftest.js"
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "playwright": "^1.51.0",
     "yaml": "^2.9.1"

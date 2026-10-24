@@ -1,0 +1,20 @@
+id: IEE2E-43
+exercise: 43
+title: "Confirmation of Time for Production Order"
+tags: [unit7, pp, production]
+requires: [IEE2E-42]
+steps:
+  - openApp: { title: Manage Production Orders }
+  - fill: { Material: "F1-${grp}" }
+  - click: Go
+  - openRow: ${prodOrder}
+  - click: Order Schedule
+  - openRow: "0010"
+  - click: Actual Data
+  - select: { label: Confirm. Type | Confirmation Type, value: Final Confirmation }
+  - fillCell: { rowContains: Machine, column: To Be Confirmed, value: "3500" }
+  - fillCell: { rowContains: Person, column: To Be Confirmed, value: "3250" }
+  - click: Save
+  - expectNoError: true
+  - click: Back
+  - expectText: Confirmed

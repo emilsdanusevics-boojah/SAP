@@ -1,0 +1,48 @@
+id: IEE2E-20
+exercise: 20
+title: "Manage WBS elements (trade fair projects)"
+tags: [unit4, co, projects]
+requires: [IEE2E-15]
+steps:
+  - openApp: { title: Project Control - Enterprise Projects }
+  - click: Create
+  - fill:
+      Project Name: Fair Paris ${grp}
+      Project ID: FAIRPAR${grp}
+  - select: { label: Project Profile, value: Overhead Project }
+  - fill:
+      Planned Start: ${yearStart}
+      Planned Finish: ${yearEnd}
+      Responsible Cost Center: MAR-${grp}
+      Profit Center: P9${grp}
+      Project Currency: EUR
+  - click: Create
+  - expectNoError: true
+  - click: Back
+
+  - fill: { label: Search, value: "FAIRPAR${grp}", enter: true }
+  - selectRow: Fair Paris ${grp}
+  - click: Copy
+  - fill:
+      dialog: true
+      fields:
+        Project Name: Fair Singapore ${grp}
+        Project ID: FAIRSIN${grp}
+        Planned Start: ${yearStart}
+  - click: { text: Copy, dialog: true }
+  - click: Create
+  - expectNoError: true
+  - click: Back
+
+  - fill: { label: Search, value: "FAIRPAR${grp}", enter: true }
+  - selectRow: Fair Paris ${grp}
+  - click: Copy
+  - fill:
+      dialog: true
+      fields:
+        Project Name: Fair Atlanta ${grp}
+        Project ID: FAIRATL${grp}
+        Planned Start: ${yearStart}
+  - click: { text: Copy, dialog: true }
+  - click: Create
+  - expectNoError: true

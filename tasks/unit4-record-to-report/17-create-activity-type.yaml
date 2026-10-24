@@ -1,0 +1,22 @@
+id: IEE2E-17
+exercise: 17
+title: "Create Activity Type IT###"
+tags: [unit4, co, master-data]
+steps:
+  - openApp: { title: Manage Activity Types }
+  - click: Create
+  - optional: true
+    click: Full Screen
+  - fill:
+      Activity Type: IT${grp}
+      Name: IT Services IEE2E${grp}
+      Description: IT Services IEE2E${grp}
+      Valid From: ${yearStart}
+      Valid To: 31.12.2099
+      Activity Unit: H
+      Cost Center Categories: "*"
+      Activity Type Category: "1"
+      Allocation Cost Element: "94311000"
+  - click: Create
+  - expectNoError: true
+  - expectText: IT${grp}

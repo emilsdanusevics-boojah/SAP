@@ -1,0 +1,54 @@
+id: IEE2E-07
+exercise: 7
+title: "Create a Business Partner FI (supplier IEE2E-###)"
+tags: [unit4, fi-ap, master-data]
+vars:
+  bp: IEE2E-${grp}
+steps:
+  - openApp: { title: Manage Business Partner Master Data }
+  - click: Create
+  - click: { text: Organization, role: menuitem }
+  - fill:
+      Business Partner: ${bp}
+  - select: { label: Grouping, value: BPAB }
+  - fill:
+      BP Role: FLVN00
+      Name 1: Bicycle Supplies ${grp}
+  - click: { text: Address, role: tab }
+  - fill:
+      Street: Sample Street
+      House Number: ${grp}
+      City: Walldorf
+      Postal Code: "69190"
+      Country/Region: DE
+      Region: BW
+      Language: EN
+  - name: Open the details of role FLVN00 (>)
+    openRow: FLVN00
+  - click: { text: Company Codes, role: tab }
+  - click: { text: Create, within: Company Codes }
+  - fill:
+      Company Code: "1010"
+      Reconciliation Account: "21100000"
+      Payment Terms: "0001"
+      Payment Methods: T
+  - click: Apply
+  - click: Apply
+  - click: { text: Bank Accounts, role: tab }
+  - click: { text: Create, within: Bank Accounts }
+  - fill:
+      ID: "01"
+      Bank Country/Region: DE
+      Bank Key: "50070024"
+      Bank Account: 8888${grp}
+  - name: Open the bank account details (>)
+    openRow: "50070024"
+  - click: Propose IBAN
+  - name: Confirm the proposed IBAN
+    optional: true
+    click: { text: [OK, Ok, Confirm], dialog: true }
+  - click: Apply
+  - click: Apply
+  - click: Create
+  - expectText: ${bp}
+  - expectText: Bicycle Supplies ${grp}

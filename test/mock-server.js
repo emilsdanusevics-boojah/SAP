@@ -1,11 +1,18 @@
 'use strict';
 
 // A tiny stand-in for the Fiori launchpad so the runner itself can be tested
-// offline: IAS-style two-step login, shell header, an iframe "GUI" app with a
-// table and a disappearing toast, and a main-frame list report.
+// offline: IAS-style two-step login, shell header with app search, an iframe
+// "GUI" app with a table and a disappearing toast, a main-frame list report,
+// a Maintain Business Users imitation and a playground (see mock-apps.js).
 const http = require('http');
 
+const fs = require('fs');
+const path = require('path');
+
 const orders = {};
+// Business roles of the mock user (Maintain Business Users).
+let roles = ['Z_S4C_GENERIC_ROLE', 'BR_OLD_ROLE'];
+const ROLE_CATALOG = ['Z_S4C_GENERIC_ROLE', 'BR_GL_ACCOUNTANT', 'BR_PURCHASER', 'BR_OLD_ROLE'];
 
 const login = (step) => `<!doctype html><title>Sign In</title><form method="post" action="/login">
   ${step === 1
@@ -16,6 +23,7 @@ const login = (step) => `<!doctype html><title>Sign In</title><form method="post
 const shell = `<!doctype html><title>Home</title>
 <header id="shell-header"><span>SAP</span><button onclick="history.back()">Back</button></header>
 <main id="content"></main>
+<script src="/mock-apps.js"></script>
 <script>
 function toast(text) {
   const t = document.createElement('div'); t.className = 'sapMMessageToast'; t.textContent = text;
@@ -36,7 +44,7 @@ function route() {
       const hit = document.getElementById('hit');
       if (hit) hit.onclick = (e) => { e.preventDefault(); c.innerHTML = '<h1>Standard Order ' + so + '</h1>'; };
     };
-  } else {
+  } else if (!(window.mockRoute && mockRoute(hash, c))) {
     c.innerHTML = '<h1>My Home</h1>';
   }
 }
@@ -102,6 +110,19 @@ function start(port = 0) {
     if (req.url.startsWith('/login')) return send(200, login(1));
     if (!authed) return send(302, '', { location: '/login' });
     if (req.url.startsWith('/ui')) return send(200, shell);
+    if (req.url === '/mock-apps.js') {
+      res.writeHead(200, { 'content-type': 'text/javascript' });
+      return res.end(fs.readFileSync(path.join(__dirname, 'mock-apps.js')));
+    }
+    if (req.url === '/api/roles' && req.method === 'POST') {
+      roles = JSON.parse(await body(req));
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end('{}');
+    }
+    if (req.url === '/api/roles') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ roles, catalog: ROLE_CATALOG }));
+    }
     if (req.url.startsWith('/gui/')) return send(200, gui(req.url.slice(5)));
     if (req.url === '/api/order' && req.method === 'POST') {
       const id = String(Object.keys(orders).length + 3000123);
@@ -118,4 +139,4 @@ function start(port = 0) {
   return new Promise((r) => server.listen(port, '127.0.0.1', () => r(server)));
 }
 
-module.exports = { start };
+module.exports = { start, getRoles: () => roles };

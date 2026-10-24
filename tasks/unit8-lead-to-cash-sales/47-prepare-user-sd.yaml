@@ -1,0 +1,12 @@
+id: IEE2E-47
+exercise: 47
+title: "Prepare Your User and Fiori Launchpad SD"
+tags: [roles, unit8]
+description: |
+  Removes the business roles from earlier units (the course asks for this to keep the
+  launchpad readable), then adds the five Sales roles. Z_S4C_GENERIC_ROLE is always kept:
+  removing it would lock the user out, and the runner refuses to remove it.
+steps:
+  - assignBusinessRoles:
+      removeOthers: true
+      add: [BR_PRICING_SPECIALIST, BR_INTERNAL_SALES_REP, BR_SHIPPING_SPECIALIST, BR_AR_ACCOUNTANT, BR_WAREHOUSE_CLERK]

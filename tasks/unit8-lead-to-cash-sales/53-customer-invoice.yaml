@@ -1,0 +1,30 @@
+id: IEE2E-53
+exercise: 53
+title: "Create customer invoice and review the result"
+tags: [unit8, sd, billing]
+requires: [IEE2E-52]
+steps:
+  - openApp: { title: Create Billing Documents }
+  - fill: { Sold-To Party | Sold-to Party: "IEE2E-${grp}" }
+  - click: Go
+  - selectRow: ${deliveryNo}
+  - name: Billing Settings - "Automatically post billing documents" must be on
+    optional: true
+    click: Billing Settings
+  - optional: true
+    check: Automatically post billing documents
+  - optional: true
+    click: { text: [OK, Ok], dialog: true }
+  - click: Create Billing Documents
+  - expectMessage:
+      regex: "9\\d{7}|created"
+      capture: { var: billingDoc, regex: "(9\\d{7})" }
+
+  - openApp: { title: Display Process Flow - Accounts Receivable }
+  - select: { label: Document Type, value: Sales Document }
+  - fill: { Sales Document: "${salesOrder}" }
+  - click: Go
+  - expectText: Billing
+  - expectText: Completed
+  - screenshot: process-flow
+  - manual: Choose the journal entry under Accounting > Manage Journal Entries and open the line item details of item 000001.

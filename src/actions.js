@@ -1,17 +1,35 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
-const { locate, fieldBuilders, clickBuilders, settle, collectMessages, appFrame } = require('./ui5');
+const readline = require('readline');
+const {
+  locate,
+  searchScopes,
+  fieldBuilders,
+  clickBuilders,
+  rowBuilders,
+  settle,
+  collectMessages,
+  appFrame,
+  sectionLocator,
+} = require('./ui5');
 const { homeUrl, SHELL } = require('./login');
 
 // Each action receives (ctx, arg) where arg is the already-interpolated value
-// from the YAML step. ctx = { page, cfg, vars, log, stepTimeout, since, outDir, task }.
+// from the YAML step. ctx = { page, cfg, vars, log, state, stepTimeout, since, outDir, task, saveVars }.
 
-const asObj = (arg, key) => (typeof arg === 'object' && arg !== null ? arg : { [key]: arg });
+// The role every course user must keep: removing it locks the user out.
+const PROTECTED_ROLE = 'Z_S4C_GENERIC_ROLE';
 
-async function findField(ctx, { label, selector, frame }) {
-  const builders = selector ? [(s) => s.locator(selector)] : fieldBuilders(label);
-  let loc = await locate(ctx.page, builders, { timeout: ctx.stepTimeout, what: `field "${label || selector}"`, frame });
+const asObj = (arg, key) => (typeof arg === 'object' && arg !== null && !Array.isArray(arg) ? arg : { [key]: arg });
+const scopeOf = (a) => ({ frame: a.frame, within: a.within, dialogOnly: !!a.dialog, index: a.index || 0 });
+// "Factory Calendar ID | Factory Calendar" or [a, b] -> alternative labels
+const alternatives = (x) => [].concat(x).flatMap((l) => String(l).split(/\s+\|\s+/));
+
+async function findField(ctx, a) {
+  const builders = a.selector ? [(s) => s.locator(a.selector)] : fieldBuilders(alternatives(a.label));
+  let loc = await locate(ctx.page, builders, { timeout: ctx.stepTimeout, what: `field "${[].concat(a.label || a.selector).join('" / "')}"`, ...scopeOf(a) });
   // getByLabel can land on a UI5 wrapper div; drill down to the real input.
   const tag = await loc.evaluate((e) => e.tagName.toLowerCase()).catch(() => '');
   if (!['input', 'textarea', 'select'].includes(tag)) {
@@ -21,8 +39,7 @@ async function findField(ctx, { label, selector, frame }) {
   return loc;
 }
 
-async function fillOne(ctx, { label, selector, value, enter, type, frame }) {
-  const field = await findField(ctx, { label, selector, frame });
+async function typeInto(ctx, field, { value, enter, type }) {
   await field.click();
   if (type) {
     // Some WebGUI fields only react to real keystrokes.
@@ -36,8 +53,12 @@ async function fillOne(ctx, { label, selector, value, enter, type, frame }) {
   await settle(ctx.page, ctx.stepTimeout);
 }
 
-async function readFieldValue(ctx, arg) {
-  const field = await findField(ctx, arg);
+async function fillOne(ctx, a) {
+  await typeInto(ctx, await findField(ctx, a), a);
+}
+
+async function readFieldValue(ctx, a) {
+  const field = await findField(ctx, a);
   return field.evaluate((e) => ('value' in e ? e.value : e.innerText) || '');
 }
 
@@ -61,26 +82,108 @@ function applyCapture(ctx, source, capture) {
   const re = new RegExp(capture.regex || '(\\d+)');
   const m = source.match(re);
   if (!m) throw new Error(`Capture "${capture.var}": /${re.source}/ did not match "${source}"`);
-  ctx.vars[capture.var] = m[1] ?? m[0];
-  ctx.log.info(`  captured ${capture.var} = ${ctx.vars[capture.var]}`);
+  setVar(ctx, capture.var, m[1] ?? m[0]);
+}
+
+function setVar(ctx, name, value) {
+  ctx.vars[name] = String(value).trim();
+  ctx.saveVars();
+  ctx.log.info(`  captured ${name} = ${ctx.vars[name]}`);
+}
+
+const norm = (t) => t.replace(/\s+/g, ' ').replace(/\s*[:*]\s*$/, '').trim();
+
+// A table cell addressed by column header text and row (1-based, or the first row containing a text).
+const inputValue = (cell) =>
+  cell
+    .locator('input:not([type="hidden"]), textarea')
+    .first()
+    .inputValue()
+    .catch(() => null);
+
+// row: 1-based data row, negative counts from the end; rowContains: first row with that text;
+// firstEmpty: true -> first row whose input in this column is empty (new item lines in GUI tables).
+async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within, dialog }) {
+  const deadline = Date.now() + ctx.stepTimeout;
+  let seen = [];
+  for (;;) {
+    for (const scope of await searchScopes(ctx.page, { within, dialogOnly: !!dialog })) {
+      const headers = scope.locator('[role="columnheader"], th').filter({ visible: true });
+      const names = (await headers.allInnerTexts().catch(() => [])).map(norm);
+      if (names.length) seen = names;
+      const wanted = alternatives(column).map((c) => c.toLowerCase());
+      const col = names.findIndex((n) => wanted.includes(n.toLowerCase()));
+      if (col < 0) continue;
+      const ariaCol = await headers.nth(col).getAttribute('aria-colindex');
+      const rows = scope
+        .locator('[role="row"], tbody tr')
+        .filter({ visible: true })
+        .filter({ hasNot: scope.locator('[role="columnheader"], th') });
+      const cellOf = (r) => (ariaCol ? r.locator(`[aria-colindex="${ariaCol}"]`).first() : r.locator('[role="gridcell"], td').nth(col));
+      if (firstEmpty) {
+        const n = await rows.count();
+        for (let i = 0; i < n; i++) if ((await inputValue(cellOf(rows.nth(i)))) === '') return cellOf(rows.nth(i));
+        continue;
+      }
+      const r = rowContains
+        ? rows.filter({ hasText: rowContains }).first()
+        : row < 0
+          ? rows.nth((await rows.count()) + row)
+          : rows.nth(row - 1);
+      if (!(await r.count())) continue;
+      return cellOf(r);
+    }
+    if (Date.now() > deadline) {
+      const which = firstEmpty ? 'first empty row' : `row ${rowContains || row}`;
+      throw new Error(`Cell "${column}" / ${which} not found${seen.length ? `. Columns: ${seen.join(', ')}` : ''}`);
+    }
+    await ctx.page.waitForTimeout(300);
+  }
+}
+
+async function findRow(ctx, a) {
+  return locate(ctx.page, rowBuilders(a.contains), { timeout: ctx.stepTimeout, what: `table row containing "${a.contains}"`, ...scopeOf(a) });
+}
+
+// Tick a row's selection checkbox / radio button (or click the row if it has none).
+async function tickRow(row) {
+  const selector = row
+    .locator('[role="checkbox"], [role="radio"], input[type="checkbox"], input[type="radio"], .sapMCb, .sapMRb')
+    .first();
+  if ((await selector.count()) > 0) {
+    const checked = await selector.getAttribute('aria-checked').catch(() => null);
+    if (checked !== 'true') await selector.click();
+    return;
+  }
+  // Grid table: the selector cell lives in a separate fixed row with the same index.
+  const idx = await row.getAttribute('data-sap-ui-rowindex').catch(() => null);
+  if (idx !== null) {
+    const cell = row.page().locator(`.sapUiTableRowSelectionCell[data-sap-ui-rowindex="${idx}"]`).first();
+    if ((await cell.count()) > 0) return cell.click();
+  }
+  await row.click();
 }
 
 const actions = {
-  // openApp: "SalesOrder-create"                 (semantic object-action hash)
-  // openApp: { hash: "SalesOrder-create", params: "SalesOrder=123" }
-  // openApp: { title: "Manage Sales Orders" }    (via launchpad search)
+  // openApp: "SalesOrder-manage"                         (launchpad hash)
+  // openApp: { title: "Manage Sales Orders" }            (pinned/cached hash, else launchpad search)
+  // openApp: { hash: "...", params: "a=1", title: "..." }
   async openApp(ctx, arg) {
     const a = asObj(arg, 'hash');
-    if (a.hash) {
-      const hash = a.hash.replace(/^#/, '') + (a.params ? `?${a.params}` : '');
-      await ctx.page.goto(`${ctx.cfg.baseUrl}/ui?sap-language=${ctx.cfg.language}#${hash}`, { waitUntil: 'domcontentloaded' });
-    } else if (a.title) {
-      await openViaSearch(ctx, a.title);
-    } else {
-      throw new Error('openApp needs "hash" or "title"');
+    const known = a.hash || (a.title && ctx.state.appHash(a.title));
+    if (known) {
+      await gotoHash(ctx, known.replace(/^#/, '') + (a.params ? `?${a.params}` : ''));
+      const err = await appOpenError(ctx);
+      if (!err) return;
+      if (!a.title) throw new Error(`App ${known} did not open: ${err}`);
+      ctx.log.warn(`  hash ${known} failed (${err}); searching for "${a.title}" instead`);
+      ctx.state.forgetApp(a.title);
     }
-    await ctx.page.locator(SHELL).first().waitFor({ state: 'visible', timeout: ctx.stepTimeout });
-    await settle(ctx.page, ctx.stepTimeout);
+    if (!a.title) throw new Error('openApp needs "hash" or "title"');
+    await openViaSearch(ctx, a.title);
+    const err = await appOpenError(ctx);
+    if (err) throw new Error(`App "${a.title}" did not open: ${err}`);
+    ctx.state.rememberApp(a.title, new URL(ctx.page.url()).hash.slice(1).split('&/')[0]);
   },
 
   // transaction: VA03   -> classic GUI transaction inside the launchpad
@@ -99,32 +202,57 @@ const actions = {
     await settle(ctx.page, ctx.stepTimeout);
   },
 
-  // fill: { label: "Sold-To Party", value: "17100001" }
-  // fill: { "Sold-To Party": "17100001", "Cust. Reference": "PO-${rand}" }
-  // Options: selector, enter: true, type: true (keystrokes), frame: app|main
-  async fill(ctx, arg) {
-    if ('label' in arg || 'selector' in arg) return fillOne(ctx, arg);
-    for (const [label, value] of Object.entries(arg)) await fillOne(ctx, { label, value });
+  // refresh: true   (F5, e.g. after role changes)
+  async refresh(ctx) {
+    await ctx.page.reload({ waitUntil: 'domcontentloaded' });
+    await ctx.page.locator(SHELL).first().waitFor({ state: 'visible', timeout: ctx.stepTimeout });
+    await settle(ctx.page, ctx.stepTimeout);
   },
 
-  // select: { label: "Order Type", value: "Standard Order" }   (sap.m.Select / ComboBox)
-  async select(ctx, { label, selector, value, frame }) {
-    const field = await findField(ctx, { label, selector, frame });
+  // fill: { label: "Sold-To Party", value: "17100001" }
+  // fill: { "Sold-To Party": "17100001", "Cust. Reference": "PO-${rand}" }
+  // fill: { within: "Bank Accounts", fields: { "Bank Key": "50070024" } }
+  // fill: { "Lot Sizing Procedure | Lot size": FX }      (alternative labels)
+  // fill: { label: [Descr., Material Description], value: ... }
+  // Options: selector, enter: true, type: true (keystrokes), within, index, dialog, frame: app|main
+  async fill(ctx, arg) {
+    if ('label' in arg || 'selector' in arg) return fillOne(ctx, arg);
+    const { fields, ...shared } = 'fields' in arg ? arg : { fields: arg };
+    // A key may list alternative labels: "Descr. | Material Description".
+    for (const [label, value] of Object.entries(fields)) await fillOne(ctx, { ...shared, label, value });
+  },
+
+  // clear: "G/L Account"  |  { label, within }
+  async clear(ctx, arg) {
+    await fillOne(ctx, { ...asObj(arg, 'label'), value: '' });
+  },
+
+  // select: { label: "Statement Type", value: "Normal (Actual - Actual)" }   (Select / ComboBox / <select>)
+  // select: { combobox: 0, value: "Goods Receipt" }   (n-th unlabelled dropdown, e.g. in Post Goods Movement)
+  async select(ctx, a) {
+    const field =
+      a.combobox !== undefined
+        ? await locate(ctx.page, [(s) => s.getByRole('combobox')], {
+            timeout: ctx.stepTimeout,
+            what: `dropdown #${a.combobox}`,
+            ...scopeOf({ ...a, index: a.combobox }),
+          })
+        : await findField(ctx, a);
     const tag = await field.evaluate((e) => e.tagName.toLowerCase());
     if (tag === 'select') {
-      await field.selectOption({ label: value }).catch(() => field.selectOption(value));
+      await field.selectOption({ label: a.value }).catch(() => field.selectOption(a.value));
     } else {
       await field.click();
       const option = await locate(
         ctx.page,
-        [(s) => s.getByRole('option', { name: value, exact: true }), (s) => s.getByRole('option', { name: value })],
-        { timeout: 3000, what: `option "${value}"`, frame }
+        [(s) => s.getByRole('option', { name: a.value, exact: true }), (s) => s.getByRole('option', { name: a.value })],
+        { timeout: 3000, what: `option "${a.value}"`, frame: a.frame }
       ).catch(() => null);
       if (option) {
         await option.click();
       } else {
-        // Editable ComboBox: type the value and confirm.
-        await field.fill(value);
+        // Editable ComboBox / input with suggestions: type the value and confirm.
+        await field.fill(a.value);
         await field.press('Enter');
       }
     }
@@ -132,57 +260,106 @@ const actions = {
   },
 
   async check(ctx, arg) {
-    const a = asObj(arg, 'label');
-    const box = await locate(ctx.page, [(s) => s.getByRole('checkbox', { name: a.label }), ...fieldBuilders(a.label)], {
-      timeout: ctx.stepTimeout,
-      what: `checkbox "${a.label}"`,
-    });
-    await box.check({ force: true });
+    await setCheckbox(ctx, asObj(arg, 'label'), true);
   },
 
   async uncheck(ctx, arg) {
-    const a = asObj(arg, 'label');
-    const box = await locate(ctx.page, [(s) => s.getByRole('checkbox', { name: a.label }), ...fieldBuilders(a.label)], {
-      timeout: ctx.stepTimeout,
-      what: `checkbox "${a.label}"`,
-    });
-    await box.uncheck({ force: true });
+    await setCheckbox(ctx, asObj(arg, 'label'), false);
   },
 
   // click: Save
-  // click: { text: "Go", role: button, index: 0, frame: app|main, selector: "css=..." }
-  // click: { text: "Save", dialog: true }   only inside an open popup/dialog
+  // click: [OK, Ok]                       (first one found)
+  // click: { text: "Add", within: "Assigned Business Roles" }
+  // click: { text: "Save", dialog: true } (only inside an open popup)
+  // click: { inRow: "Petty Cash", role: link }   (first link in that table row; add text to pick one)
+  // click: { text, role, index, selector, frame, double: true }
   async click(ctx, arg) {
     const a = asObj(arg, 'text');
-    const builders = a.selector ? [(s) => s.locator(a.selector)] : clickBuilders(a.text, a.role);
+    const builders = a.selector
+      ? [(s) => s.locator(a.selector)]
+      : a.inRow
+        ? inRowBuilders(a)
+        : clickBuilders(a.text, a.role);
     const target = await locate(ctx.page, builders, {
       timeout: ctx.stepTimeout,
-      what: `"${a.text || a.selector}"`,
-      frame: a.frame,
-      index: a.index || 0,
-      dialogOnly: !!a.dialog,
+      what: `"${[].concat(a.text || a.selector || a.role || 'link').join('" or "')}"${a.inRow ? ` in row "${a.inRow}"` : ''}`,
+      ...scopeOf(a),
     });
     await target.click(a.double ? { clickCount: 2 } : {});
     await settle(ctx.page, ctx.stepTimeout);
   },
 
-  // fillCell: { row: 1, column: "Material", value: "TG11" }   (row is 1-based, data rows only)
-  async fillCell(ctx, { row = 1, column, value, enter }) {
-    const scope = (await appFrame(ctx.page)) || ctx.page.mainFrame();
-    const headers = scope.locator('[role="columnheader"]:visible, th:visible');
-    await headers.first().waitFor({ timeout: ctx.stepTimeout });
-    const names = (await headers.allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
-    const col = names.findIndex((n) => n === column || n.replace(/[:*]$/, '').trim() === column);
-    if (col < 0) throw new Error(`Column "${column}" not found. Columns: ${names.join(', ')}`);
-    const header = headers.nth(col);
-    const ariaCol = await header.getAttribute('aria-colindex');
-    const rows = scope.locator('[role="row"]:visible, tbody tr:visible').filter({ has: scope.locator('input, [role="gridcell"], td') });
-    const r = rows.nth(row - 1);
-    const cell = ariaCol ? r.locator(`[aria-colindex="${ariaCol}"]`) : r.locator('[role="gridcell"], td').nth(col);
-    const input = cell.locator('input, textarea').first();
-    await input.click();
-    await input.fill(String(value));
-    await input.press(enter ? 'Enter' : 'Tab');
+  // selectRow: "65100000"  |  { contains: [BR_PURCHASER, BR_PRODMASTER_SPECIALIST], within, dialog }
+  async selectRow(ctx, arg) {
+    const a = asObj(arg, 'contains');
+    for (const text of [].concat(a.contains)) {
+      await tickRow(await findRow(ctx, { ...a, contains: text }));
+    }
+    await settle(ctx.page, ctx.stepTimeout);
+  },
+
+  // openRow: "IEE2E-035"  |  { contains, within }  -> navigate into the row (">" or row click)
+  async openRow(ctx, arg) {
+    const a = asObj(arg, 'contains');
+    const row = await findRow(ctx, a);
+    const nav = row.locator('.sapMLIBImgNav, .sapUiTableRowActionIcon, [aria-label*="Navigat"], [title*="Navigat"]').first();
+    if ((await nav.count()) > 0) await nav.click();
+    else await row.locator('[role="gridcell"], td').filter({ hasText: a.contains }).first().click().catch(() => row.click());
+    await settle(ctx.page, ctx.stepTimeout);
+  },
+
+  // fillCell: { row: 2, column: "G/L Account", value: "10010000" }   (row is 1-based, data rows only)
+  // fillCell: { rowContains: "S11-035", column: "SLoc", value: "101A", within: "Items" }
+  async fillCell(ctx, a) {
+    const cell = await findCell(ctx, a);
+    const input = cell.locator('input:not([type="hidden"]), textarea').first();
+    await typeInto(ctx, input, a);
+  },
+
+  // clickCell: { rowContains: "${prNo1}", column: "Assign Source of Supply" }   (link/button in that cell)
+  async clickCell(ctx, a) {
+    const cell = await findCell(ctx, a);
+    const inner = cell.locator('a, [role="link"], button, [role="button"]').first();
+    await ((await inner.count()) > 0 ? inner : cell).click();
+    await settle(ctx.page, ctx.stepTimeout);
+  },
+
+  // addFilter: "Profit Center"  -> "Adapt Filters", search, tick, OK
+  async addFilter(ctx, arg) {
+    const names = [].concat(arg);
+    await actions.click(ctx, { text: ['Adapt Filters', 'Filters'], role: 'button' });
+    for (const name of names) {
+      const search = await locate(
+        ctx.page,
+        [(s) => s.getByRole('searchbox'), (s) => s.getByPlaceholder(/search/i)],
+        { timeout: ctx.stepTimeout, what: 'filter search field', dialogOnly: true }
+      );
+      await search.fill(name);
+      await settle(ctx.page, ctx.stepTimeout);
+      await tickRow(await findRow(ctx, { contains: name, dialog: true }));
+    }
+    await actions.click(ctx, { text: ['OK', 'Ok', 'Apply'], dialog: true, role: 'button' });
+  },
+
+  // upload: { file: "uploads/F2121_035_PlanCostRate.xlsx" }   (sets the page's file input)
+  async upload(ctx, arg) {
+    const a = asObj(arg, 'file');
+    const file = path.resolve(a.file);
+    if (!fs.existsSync(file)) throw new Error(`Upload file not found: ${file}`);
+    await pollUntil(
+      ctx,
+      async () => {
+        for (const scope of await searchScopes(ctx.page, scopeOf(a))) {
+          const input = scope.locator(a.selector || 'input[type="file"]').first();
+          if ((await input.count().catch(() => 0)) > 0) {
+            await input.setInputFiles(file);
+            return { ok: true };
+          }
+        }
+        return { ok: false };
+      },
+      'No file input found on the page'
+    );
     await settle(ctx.page, ctx.stepTimeout);
   },
 
@@ -224,21 +401,19 @@ const actions = {
       return;
     }
     const builders = a.selector ? [(s) => s.locator(a.selector)] : [(s) => s.getByText(a.text)];
-    await locate(ctx.page, builders, { timeout: ctx.stepTimeout, what: `"${a.text || a.selector}"` });
+    await locate(ctx.page, builders, { timeout: ctx.stepTimeout, what: `"${a.text || a.selector}"`, ...scopeOf(a) });
   },
 
-  // expectText: "Standard Order"  |  { text, not: true }
+  // expectText: "Standard Order"  |  { text, exact, within, not: true }
   async expectText(ctx, arg) {
     const a = asObj(arg, 'text');
+    const builders = [(s) => s.getByText(a.text, { exact: !!a.exact })];
     if (a.not) {
-      const found = await locate(ctx.page, [(s) => s.getByText(a.text)], { timeout: 1500, what: a.text }).catch(() => null);
+      const found = await locate(ctx.page, builders, { timeout: 1500, what: a.text, ...scopeOf(a) }).catch(() => null);
       if (found) throw new Error(`Text "${a.text}" should not be visible`);
       return;
     }
-    await locate(ctx.page, [(s) => s.getByText(a.text, { exact: !!a.exact })], {
-      timeout: ctx.stepTimeout,
-      what: `text "${a.text}"`,
-    });
+    await locate(ctx.page, builders, { timeout: ctx.stepTimeout, what: `text "${a.text}"`, ...scopeOf(a) });
   },
 
   // expectField: { label: "Net Value", value: "100.00" } | { label, contains } | { label, notEmpty: true }
@@ -258,7 +433,7 @@ const actions = {
   },
 
   // expectMessage: "has been saved"
-  // expectMessage: { contains: "Standard Order", capture: { var: salesOrder, regex: "Standard Order (\\d+)" } }
+  // expectMessage: { contains: "created", capture: { var: salesOrder, regex: "Order (\\d+)" } }
   // expectMessage: { regex: "Order \\d+ (saved|created)", notContains: "error" }
   async expectMessage(ctx, arg) {
     const a = asObj(arg, 'contains');
@@ -278,35 +453,39 @@ const actions = {
     applyCapture(ctx, res.text, a.capture);
   },
 
-  // expectNoError: true  -> fails if an error message/box appeared during this task step window
+  // expectNoError: true  -> fails if an error message box/strip/status bar is visible
   async expectNoError(ctx) {
-    const scope = (await appFrame(ctx.page)) || ctx.page.mainFrame();
-    const errBox = scope.locator('.sapMMessageBoxError:visible, .sapMMsgStripError:visible, .lsMessageBar--error:visible');
-    if ((await errBox.count()) > 0) throw new Error(`Error shown: ${(await errBox.first().innerText()).trim()}`);
+    for (const scope of await searchScopes(ctx.page)) {
+      const errBox = scope.locator(
+        '.sapMMessageBoxError:visible, .sapMMsgStripError:visible, .lsMessageBar--error:visible, .lsMessageBar[class*="Error"]:visible'
+      );
+      if ((await errBox.count().catch(() => 0)) > 0) throw new Error(`Error shown: ${(await errBox.first().innerText()).trim()}`);
+    }
   },
 
   // capture: { var: soldTo, from: field, label: "Sold-To Party" }
   // capture: { var: docNo, from: message, regex: "(\\d{8,10})" }
-  // capture: { var: docNo, from: text, selector: ".sapMObjectNumber", regex: "..." }
+  // capture: { var: prNo, from: cell, column: "Purchase Requisition", row: 1 }
+  // capture: { var: title, from: text, selector: ".sapUxAPObjectPageHeaderIdentifierTitle", regex: "..." }
   // capture: { var: hash, from: url, regex: "SalesOrder=(\\d+)" }
   async capture(ctx, a) {
     const from = a.from || 'message';
     let source;
     if (from === 'field') source = await readFieldValue(ctx, a);
     else if (from === 'url') source = ctx.page.url();
+    else if (from === 'cell') source = (await (await findCell(ctx, a)).innerText()).trim();
     else if (from === 'text') {
-      const loc = await locate(ctx.page, [(s) => s.locator(a.selector)], { timeout: ctx.stepTimeout, what: a.selector });
+      const loc = await locate(ctx.page, [(s) => s.locator(a.selector)], { timeout: ctx.stepTimeout, what: a.selector, ...scopeOf(a) });
       source = (await loc.innerText()).trim();
     } else source = await messagesText(ctx);
-    if (!a.regex && from !== 'message') {
-      ctx.vars[a.var] = source.trim();
-      ctx.log.info(`  captured ${a.var} = ${ctx.vars[a.var]}`);
-    } else applyCapture(ctx, source, a);
+    if (!a.regex && from !== 'message') setVar(ctx, a.var, source);
+    else applyCapture(ctx, source, a);
   },
 
   // set: { customer: "17100001" }
   async set(ctx, obj) {
     Object.assign(ctx.vars, obj);
+    ctx.saveVars();
   },
 
   async screenshot(ctx, name) {
@@ -319,40 +498,196 @@ const actions = {
     ctx.log.info(`  note: ${text}`);
   },
 
+  // Close extra browser tabs an app opened (PDF preview, T-account view, ...).
+  async closePopups(ctx) {
+    for (const p of ctx.page.context().pages()) if (p !== ctx.page) await p.close();
+    await ctx.page.bringToFront();
+  },
+
+  // manual: "Prepare the Excel file ..."
+  // Something a human has to do or judge. With --interactive the run waits for
+  // Enter in the terminal; otherwise the step is reported as "manual" and skipped.
+  async manual(ctx, arg) {
+    const a = asObj(arg, 'text');
+    if (!ctx.cfg.interactive) {
+      throw Object.assign(new Error(`Manual step (run with --headed --interactive to do it): ${a.text}`), { manual: true });
+    }
+    ctx.log.warn(`  ✋ ${a.text}\n     Do this in the browser window, then press Enter here to continue.`);
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    await new Promise((resolve) => rl.question('', resolve));
+    rl.close();
+    await settle(ctx.page, ctx.stepTimeout);
+  },
+
   // pause: true  -> opens the Playwright inspector (use with --headed) to debug a task
   async pause(ctx) {
     await ctx.page.pause();
   },
+
+  // Course housekeeping: "Use Maintain Business Users to assign role X to your user".
+  // assignBusinessRoles: { add: [BR_GL_ACCOUNTANT] }
+  // assignBusinessRoles: { add: [...], removeOthers: true }   (keeps Z_S4C_GENERIC_ROLE, always)
+  // Roles already assigned are skipped, so the step can be re-run safely.
+  async assignBusinessRoles(ctx, a) {
+    const add = [].concat(a.add || []);
+    const section = a.section || 'Assigned Business Roles';
+    const user = a.user || ctx.cfg.user;
+    if (!user) throw new Error('assignBusinessRoles needs SAP_USER');
+
+    await actions.openApp(ctx, { title: a.app || 'Maintain Business Users' });
+    await fillOne(ctx, { label: 'Search', value: user, enter: true });
+    await softClick(ctx, 'Go');
+    await actions.openRow(ctx, user);
+    await actions.click(ctx, 'Edit');
+
+    const area = await sectionLocator(ctx.page, section);
+    const areaText = await area.innerText({ timeout: ctx.stepTimeout });
+
+    if (a.removeOthers) {
+      const keep = [PROTECTED_ROLE, ...add, ...[].concat(a.keep || [])];
+      const rows = area.getByRole('row').filter({ hasNot: area.getByRole('columnheader') });
+      let removed = 0;
+      for (let i = 0; i < (await rows.count()); i++) {
+        const text = await rows.nth(i).innerText();
+        if (!text.trim() || keep.some((k) => text.includes(k))) continue;
+        if (text.includes(PROTECTED_ROLE)) continue; // belt and braces
+        await tickRow(rows.nth(i));
+        removed++;
+      }
+      if (removed) await actions.click(ctx, { text: 'Remove', within: section });
+      ctx.log.info(`  removed ${removed} other role(s); kept ${PROTECTED_ROLE}`);
+    }
+
+    for (const role of add) {
+      if (areaText.includes(role)) {
+        ctx.log.info(`  ${role} already assigned`);
+        continue;
+      }
+      await actions.click(ctx, { text: 'Add', within: section });
+      const search = await locate(
+        ctx.page,
+        [(s) => s.getByRole('searchbox'), (s) => s.getByPlaceholder(/search/i)],
+        { timeout: ctx.stepTimeout, what: 'role search field', dialogOnly: true }
+      );
+      await search.fill(role);
+      await search.press('Enter');
+      await settle(ctx.page, ctx.stepTimeout);
+      await tickRow(await findRow(ctx, { contains: role, dialog: true }));
+      await actions.click(ctx, { text: ['OK', 'Ok'], dialog: true, role: 'button' });
+    }
+
+    await actions.click(ctx, 'Save');
+    // Saved = back in display mode (Edit visible again); only then leave the page.
+    await locate(ctx.page, clickBuilders('Edit', 'button'), { timeout: ctx.stepTimeout, what: 'display mode after Save' });
+    await actions.expectNoError(ctx);
+    for (const role of add) await actions.expectText(ctx, { text: role, within: section });
+    await actions.home(ctx);
+    await actions.refresh(ctx);
+  },
 };
+
+function inRowBuilders(a) {
+  const role = a.role || 'link';
+  const rows = [
+    (s) => s.getByRole('row').filter({ hasText: a.inRow }),
+    (s) => s.locator('tr, [role="listitem"], .sapMLIB').filter({ hasText: a.inRow }),
+  ];
+  const targets = a.text ? [].concat(a.text).map((t) => (row) => row.getByRole(role, { name: t })) : [(row) => row.getByRole(role)];
+  return rows.flatMap((row) => targets.map((target) => (s) => target(row(s))));
+}
+
+async function setCheckbox(ctx, a, on) {
+  const labels = alternatives(a.label);
+  const box = await locate(
+    ctx.page,
+    [
+      ...labels.map((l) => (s) => s.getByRole('checkbox', { name: l, exact: true })),
+      ...labels.map((l) => (s) => s.getByRole('checkbox', { name: l })),
+      ...fieldBuilders(labels),
+    ],
+    { timeout: ctx.stepTimeout, what: `checkbox "${a.label}"`, ...scopeOf(a) }
+  );
+  const state = await box.getAttribute('aria-checked').catch(() => null);
+  const isOn = state === null ? await box.isChecked().catch(() => !on) : state === 'true';
+  if (isOn !== on) await box.click();
+  await settle(ctx.page, ctx.stepTimeout);
+}
+
+async function softClick(ctx, text) {
+  const target = await locate(ctx.page, clickBuilders(text, 'button'), { timeout: 2000, what: text }).catch(() => null);
+  if (target) {
+    await target.click();
+    await settle(ctx.page, ctx.stepTimeout);
+  }
+}
+
+async function gotoHash(ctx, hash) {
+  await ctx.page.goto(`${ctx.cfg.baseUrl}/ui?sap-language=${ctx.cfg.language}#${hash}`, { waitUntil: 'domcontentloaded' });
+  await ctx.page.locator(SHELL).first().waitFor({ state: 'visible', timeout: ctx.stepTimeout });
+  await settle(ctx.page, ctx.stepTimeout);
+}
+
+// Launchpad error dialogs shown when an intent cannot be resolved or is not authorised.
+async function appOpenError(ctx) {
+  const re = /could not open app|cannot be opened|navigation to this application is not supported|not authorized|app could not be found|failed to load/i;
+  const hit = ctx.page.mainFrame().getByText(re).filter({ visible: true }).first();
+  if ((await hit.count().catch(() => 0)) === 0) return null;
+  const text = (await hit.innerText().catch(() => 'error')).trim();
+  await softClick(ctx, ['Close', 'OK']);
+  return text;
+}
 
 async function openViaSearch(ctx, title) {
   const { page } = ctx;
   await actions.home(ctx);
-  const searchBtn = await locate(
-    page,
-    [(s) => s.locator('#sf'), (s) => s.getByRole('button', { name: /^search$/i }), (s) => s.getByTitle(/search/i)],
-    { timeout: ctx.stepTimeout, what: 'launchpad search', frame: 'main' }
-  );
-  await searchBtn.click();
-  const input = await locate(
-    page,
-    [(s) => s.getByRole('searchbox'), (s) => s.locator('input[type="search"]'), (s) => s.getByPlaceholder(/search/i)],
-    { timeout: ctx.stepTimeout, what: 'search input', frame: 'main' }
-  );
+  let input = await locate(page, [(s) => s.getByRole('searchbox'), (s) => s.locator('input[type="search"]')], {
+    timeout: 1500,
+    what: 'search input',
+    frame: 'main',
+  }).catch(() => null);
+  if (!input) {
+    const opener = await locate(
+      page,
+      [(s) => s.locator('#sf'), (s) => s.getByRole('button', { name: /^search$/i }), (s) => s.getByRole('button', { name: /search/i })],
+      { timeout: ctx.stepTimeout, what: 'launchpad search button', frame: 'main' }
+    );
+    await opener.click();
+    input = await locate(
+      page,
+      [(s) => s.getByRole('searchbox'), (s) => s.locator('input[type="search"]'), (s) => s.getByPlaceholder(/search/i)],
+      { timeout: ctx.stepTimeout, what: 'search input', frame: 'main' }
+    );
+  }
   await input.fill(title);
-  await input.press('Enter');
-  await settle(page, ctx.stepTimeout);
-  const result = await locate(
+  const before = page.url();
+  // Suggestion list first (fast path), then the full results page.
+  const suggestion = await locate(
     page,
-    [
-      (s) => s.getByRole('link', { name: title, exact: true }),
-      (s) => s.getByRole('button', { name: title, exact: true }),
-      (s) => s.getByRole('option', { name: title }),
-      (s) => s.getByText(title, { exact: true }),
-    ],
-    { timeout: ctx.stepTimeout, what: `app "${title}" in search results`, frame: 'main' }
-  );
-  await result.click();
+    [(s) => s.getByRole('option', { name: title, exact: true }), (s) => s.getByRole('option', { name: title })],
+    { timeout: 6000, what: 'suggestion', frame: 'main' }
+  ).catch(() => null);
+  if (suggestion) {
+    await suggestion.click();
+  } else {
+    await input.press('Enter');
+    await settle(page, ctx.stepTimeout);
+    const result = await locate(
+      page,
+      [
+        (s) => s.getByRole('link', { name: title, exact: true }),
+        (s) => s.getByRole('button', { name: title, exact: true }),
+        (s) => s.getByRole('link', { name: title }),
+        (s) => s.getByText(title, { exact: true }),
+      ],
+      { timeout: ctx.stepTimeout, what: `app "${title}" in search results (is the business role assigned?)`, frame: 'main' }
+    );
+    await result.click();
+  }
+  await page.waitForURL((u) => u.toString() !== before && !/#(Shell-home|Action-search)/.test(u.toString()), {
+    timeout: ctx.stepTimeout,
+  });
+  await page.locator(SHELL).first().waitFor({ state: 'visible', timeout: ctx.stepTimeout });
+  await settle(page, ctx.stepTimeout);
 }
 
-module.exports = { actions };
+module.exports = { actions, PROTECTED_ROLE };

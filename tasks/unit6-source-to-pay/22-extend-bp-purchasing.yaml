@@ -1,0 +1,29 @@
+id: IEE2E-22
+exercise: 22
+title: "Extend Business Partner for Purchasing"
+tags: [unit6, mm, master-data]
+requires: [IEE2E-07]
+steps:
+  - openApp: { title: Manage Business Partner Master Data }
+  - fill: { Business Partner: "IEE2E-${grp}" }
+  - click: Go
+  - openRow: IEE2E-${grp}
+  - click: Edit
+  - click: { text: Roles, role: tab }
+  - click: { text: Create, within: Roles }
+  - fillCell: { within: Roles, row: -1, column: BP Role, value: FLVN01 }
+  - openRow: FLVN01
+  - click: { text: Purchasing Organizations, role: tab }
+  - click: { text: Create, within: Purchasing Organizations }
+  - fill:
+      Purchasing Organization: "1010"
+      Purchasing Group: "000"
+      Planned Delivery Time: "15"
+      Order Currency: EUR
+      Payment Terms: "0001"
+      Incoterms: FH
+  - check: Automatic Purchase Order
+  - click: Apply
+  - click: Apply
+  - click: Save
+  - expectNoError: true

@@ -1,0 +1,49 @@
+id: IEE2E-31
+exercise: 31
+title: "Execute a Payment Run"
+tags: [unit6, fi-ap, payment]
+requires: [IEE2E-30]
+description: Payment run identification IE### must be unique per run date; re-running on the same day fails.
+steps:
+  - openApp: { title: Display Supplier Balances }
+  - fill:
+      Supplier: IEE2E-${grp}
+      Company Code: "1010"
+      Fiscal Year: ${year}
+  - click: Go
+  - screenshot: balances
+
+  - openApp: { title: Manage Automatic Payments }
+  - click: Create Parameter
+  - fill:
+      Run Date: ${today}
+      Identification: IE${grp}
+  - click: { text: Create, dialog: true }
+  - fill:
+      Posting Date: ${today}
+      Docs. Entered Up To: ${today}
+      Company Code: "1010"
+      Next Payment Date: ${date(+1m)}
+      Payment Method: T
+      Supplier: IEE2E-${grp}
+  - check: Additional Log
+  - click: Save
+  - expectNoError: true
+
+  - click: Schedule
+  - click: Proposal
+  - click: { text: Start Immediately, dialog: true }
+  - click: { text: Schedule, dialog: true }
+  - fill: { Identification: "IE${grp}" }
+  - click: Go
+  - click: { text: Proposals Processed, role: tab }
+  - waitFor: IE${grp}
+  - selectRow: IE${grp}
+  - click: Schedule Payment
+  - click: { text: Start Immediately, dialog: true }
+  - click: { text: Schedule, dialog: true }
+  - expectMessage: Payment was scheduled
+  - click: { text: Payments Processed, role: tab }
+  - openRow: IE${grp}
+  - click: { text: Payments, role: tab }
+  - screenshot: payments

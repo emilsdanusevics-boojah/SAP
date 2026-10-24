@@ -1,0 +1,39 @@
+id: IEE2E-29
+exercise: 29
+title: "Post Goods Receipt and Analyze the Impact"
+tags: [unit6, mm, inventory]
+requires: [IEE2E-27]
+steps:
+  - openApp: { title: Post Goods Receipt for Purchasing Document }
+  - fill: { label: Purchasing Document, value: "${poNo}", enter: true }
+  - expectText: R124-${grp}
+  - optional: true
+    select: { label: Printing, value: Individual Slip }
+  - fill: { Delivery Note: "DEL IEE2E ${grp}" }
+  - fillCell: { row: 1, column: Storage Location, value: 101C }
+  - optional: true
+    fillCell: { row: 2, column: Storage Location, value: 101C }
+  - click: Post
+  - expectMessage:
+      regex: "\\d{10}"
+      capture: { var: grMatDoc, regex: "(\\d{10})" }
+  - optional: true
+    click: { text: [OK, Ok], dialog: true }
+
+  - openApp: { title: Material Documents Overview }
+  - fill: { Material: "R124-${grp}" }
+  - click: Go
+  - expectText: ${grMatDoc}
+  - openRow: ${grMatDoc}
+  - click: Process Flow
+  - screenshot: process-flow
+  - manual: Open "Display Document Flow - Material Document" and the T-account view (ledger 0L only); review stock vs GR/IR.
+
+  - openApp: { title: Stock - Single Material }
+  - fill: { label: Material, value: "R124-${grp}", enter: true }
+  - expectText: 101C
+  - selectRow: 101C
+  - click: Transfer Stock - In Plant
+  - manual: >
+      Move 10 PC from unrestricted-use to blocked stock (arrow up next to unrestricted stock,
+      quantity 10, Enter, Post), then check 190 unrestricted / 10 blocked.

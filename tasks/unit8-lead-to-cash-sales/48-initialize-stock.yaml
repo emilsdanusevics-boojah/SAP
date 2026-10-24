@@ -1,0 +1,27 @@
+id: IEE2E-48
+exercise: 48
+title: "Initialize Stock for Standalone Sales Delivery"
+tags: [unit8, sd, inventory, standalone, gui]
+skip: Only for a standalone Sales workshop - Unit 7 already produces 100 PC of F1-###. Run with --grep IEE2E-48 to include.
+steps:
+  - openApp: { title: Post Goods Movement }
+  - select: { combobox: 0, value: Goods Receipt }
+  - select: { combobox: 1, value: Other }
+  - fill: { label: Movement Type, value: "561" }
+  - fillCell: { row: 1, column: Mat. Short Text | Material, value: "F1-${grp}" }
+  - fillCell: { row: 1, column: Qty in UnE | Quantity, value: "100" }
+  - fillCell: { row: 1, column: EUn | UoM, value: PC }
+  - fillCell: { row: 1, column: Plnt | Plant, value: "1010" }
+  - fillCell: { row: 1, column: SLoc | Storage Location, value: 101A }
+  - check: Item OK | OK
+  - click: Check
+  - click: Post
+  - expectMessage: { regex: "posted|\\d{10}" }
+
+  - openApp: { title: Stock - Single Material }
+  - fill:
+      Material: F1-${grp}
+      Plant: "1010"
+  - click: Go
+  - expectText: 101A
+  - expectText: "100"

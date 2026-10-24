@@ -1,0 +1,14 @@
+id: IEE2E-36
+exercise: 36
+title: "Change Routing for Semi-Finished Product S12-###"
+tags: [unit7, pp, master-data, gui]
+steps:
+  - openApp: { title: Change Routing }
+  - fill:
+      Material: S12-${grp}
+      Plant: "1010"
+  - press: Enter
+  - fillCell: { row: 1, column: Machine, value: "35" }
+  - fillCell: { row: 1, column: Labor, value: "25", enter: true }
+  - click: Save
+  - expectMessage: { regex: "saved|changed" }

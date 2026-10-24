@@ -1,0 +1,36 @@
+id: IEE2E-39
+exercise: 39
+title: "Extend Product Master R124-### for MRP"
+tags: [unit7, pp, master-data, gui]
+requires: [IEE2E-23]
+steps:
+  - openApp: { title: Create Material }
+  - fill: { label: Material, value: "R124-${grp}" }
+  - press: Enter
+  - name: Confirm "material already exists" warning
+    press: Enter
+  - selectRow: { contains: [MRP 1, MRP 2, MRP 3], dialog: true }
+  - press: Enter
+  - fill:
+      dialog: true
+      fields:
+        Plant: "1010"
+        Stor. Loc. | Storage Location: 101B
+  - press: Enter
+  - fill:
+      MRP Type: PD
+      MRP Controller: "001"
+      Lot Sizing Procedure | Lot size: FX
+      Fixed Lot Size: "100"
+  - press: Enter
+  - click: { text: MRP 2, role: tab }
+  - fill:
+      Planned Deliv. Time | Planned Delivery Time | Planned Delivery Time in Days: "10"
+      Safety Stock: "50"
+  - press: Enter
+  - click: { text: MRP 3, role: tab }
+  - fill:
+      Availability Check: SR
+  - press: Enter
+  - click: Save
+  - expectMessage: { regex: "created|changed|extended" }

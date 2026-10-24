@@ -1,0 +1,25 @@
+id: IEE2E-42
+exercise: 42
+title: "Post Goods Issues and Analyze the Impact"
+tags: [unit7, pp, production, gui]
+requires: [IEE2E-41]
+steps:
+  - openApp: { title: Pick Components for Production Orders }
+  - fill:
+      Profile | Selection Profile: "000002"
+      Material: F1-${grp}
+  - press: F8
+  - click: [Select All, Select all]
+  - click: Picking
+  - fillCell: { rowContains: "R14-${grp}", column: Storage Location | SLoc, value: 101C }
+  - name: Post the goods issue
+    click: [Post, Save]
+  - expectNoError: true
+  - click: Refresh
+
+  - openApp: { title: Manage Production Orders }
+  - fill: { Material: "F1-${grp}" }
+  - click: Go
+  - openRow: ${prodOrder}
+  - screenshot: components-consumed
+  - manual: Check that component open quantities are 0 and review the stock/requirements lists of the components.

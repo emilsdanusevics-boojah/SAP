@@ -1,0 +1,58 @@
+id: IEE2E-50
+exercise: 50
+title: "Create customer specific condition record (PPR0 price, YK07 discount)"
+tags: [unit8, sd, pricing]
+requires: [IEE2E-49]
+steps:
+  # 1. Price 2850 EUR / PC for F1-###
+  - openApp: { title: Manage Prices - Sales }
+  - optional: true
+    select: { label: Editing Status, value: All }
+  - fill:
+      Condition Type: PPR0
+      Key Combination: "304"
+      Sales Organization: "1010"
+      Distribution Channel: "10"
+      Product: F1-${grp}
+  - click: Go
+  - click: Create
+  - fill:
+      Valid From: ${monthStart}
+      Condition Amount or Ratio: "2850"
+  - click: Save
+  - expectMessage:
+      contains: Condition record
+      capture: { var: conditionPrice, regex: "Condition record (\\d+)" }
+
+  # 2. Check the price in the material master (Display Material)
+  - openApp: { title: Display Material }
+  - fill: { label: Material, value: "F1-${grp}", enter: true }
+  - selectRow: { contains: "Sales: Sales Org. Data 1", dialog: true }
+  - press: Enter
+  - fill:
+      dialog: true
+      fields:
+        Plant: "1010"
+        Sales Org. | Sales Organization: "1010"
+        Distr. Channel | Distribution Channel: "10"
+  - press: Enter
+  - click: Conditions
+  - expectText: "2.850"
+
+  # 3. Customer discount -2 %
+  - openApp: { title: Manage Prices - Sales }
+  - fill:
+      Condition Type: YK07
+      Key Combination: "307"
+      Customer: IEE2E-${grp}
+      Sales Organization: "1010"
+      Distribution Channel: "10"
+  - click: Go
+  - click: Create
+  - fill:
+      Valid From: ${monthStart}
+      Condition Amount or Ratio: "-2"
+  - click: Save
+  - expectMessage:
+      contains: Condition record
+      capture: { var: conditionDiscount, regex: "Condition record (\\d+)" }

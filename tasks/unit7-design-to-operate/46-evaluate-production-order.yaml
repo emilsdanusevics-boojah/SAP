@@ -1,0 +1,26 @@
+id: IEE2E-46
+exercise: 46
+title: "Evaluate Production Order"
+tags: [unit7, pp, controlling]
+requires: [IEE2E-44]
+steps:
+  - openApp: { title: Analyze Production Costs - Event-Based }
+  - fill: { Order: "${prodOrder}" }
+  - select: { label: Current Order Status, value: Closed }
+  - click: Go
+  - openRow: ${prodOrder}
+  - screenshot: event-based-costs
+  - manual: >
+      Switch to the "Costs by Business Transaction" and "Variance by G/L Account" views, expand all,
+      try AI Summarize, then use Related Apps > Display Line Items - Production Accounting and
+      Display Journal Entries - New Version as described in the guide (save the layout as Standard_Varc_${grp}).
+
+  - openApp: { title: Production Cost Overview - Event-Based }
+  - fill:
+      Ledger: 0L
+      Company Code: "1010"
+      Currency: EUR
+      Order: ${prodOrder}
+  - click: Go
+  - expectText: Order Variances
+  - screenshot: cost-overview

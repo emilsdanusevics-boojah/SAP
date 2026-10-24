@@ -1,0 +1,29 @@
+id: IEE2E-44
+exercise: 44
+title: "Post the Goods Receipt for Production Order and Analyze the Impact"
+tags: [unit7, pp, production, gui]
+requires: [IEE2E-43]
+steps:
+  - openApp: { title: Stock - Single Material }
+  - fill: { label: Material, value: "F1-${grp}", enter: true }
+  - screenshot: stock-before
+
+  - openApp: { title: Post Goods Movement }
+  - select: { combobox: 0, value: Goods Receipt }
+  - select: { combobox: 1, value: Order }
+  - fill: { label: Order, value: "${prodOrder}", enter: true }
+  - check: Item OK | OK
+  - click: Check
+  - click: Post
+  - expectMessage:
+      regex: "posted|\\d{10}"
+      capture: { var: prodGrDoc, regex: "(\\d{10})" }
+
+  - openApp: { title: Manage Production Orders }
+  - fill: { Material: "F1-${grp}" }
+  - click: Go
+  - expectText: Delivered
+
+  - openApp: { title: Stock - Single Material }
+  - fill: { label: Material, value: "F1-${grp}", enter: true }
+  - expectText: "100"

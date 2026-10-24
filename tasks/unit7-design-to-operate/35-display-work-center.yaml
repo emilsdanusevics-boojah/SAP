@@ -1,0 +1,28 @@
+id: IEE2E-35
+exercise: 35
+title: "Display Work Center T-A###"
+tags: [unit7, pp, master-data, gui]
+description: Read-only. The values the guide asks you to note are captured into the report.
+steps:
+  - openApp: { title: Display Work Center }
+  - fill:
+      Plant: "1010"
+      Work Center: T-A${grp}
+  - press: Enter
+  - capture: { var: wc_category, from: field, label: Work Center Category }
+  - capture: { var: wc_usage, from: field, label: Usage }
+  - capture: { var: wc_stdValueKey, from: field, label: Standard Value Key }
+  - click: { text: Default Values, role: tab }
+  - capture: { var: wc_controlKey, from: field, label: Control Key }
+  - click: { text: Capacities, role: tab }
+  - click: Capacity
+  - capture: { var: wc_factoryCalendar, from: field, label: Factory Calendar ID | Factory Calendar }
+  - optional: true
+    capture: { var: wc_operatingTime, from: field, label: Operating Time }
+  - optional: true
+    capture: { var: wc_noIndCapacities, from: field, label: No. Ind. Capacities | No. ind. Capacities }
+  - press: F3
+  - click: { text: Costing, role: tab }
+  - capture: { var: wc_controllingArea, from: field, label: Controlling Area }
+  - capture: { var: wc_costCenter, from: field, label: Cost Center }
+  - screenshot: costing-tab

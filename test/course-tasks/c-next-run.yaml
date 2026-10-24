@@ -1,0 +1,7 @@
+id: T-NEXT-RUN
+exercise: 6
+title: Uses a value captured in an earlier run
+skip: run explicitly by the self-test
+steps:
+  - log: document from earlier run is ${docNo}
+  - set: { checked: "${docNo}" }

@@ -1,0 +1,51 @@
+id: IEE2E-37
+exercise: 37
+title: "Create Standard Cost Estimate and Release (F1-###)"
+tags: [unit7, pp, costing, gui]
+requires: [IEE2E-34, IEE2E-36]
+steps:
+  # Task 1: cost estimate
+  - openApp: { title: Manage Material Cost Estimates }
+  - click: Create
+  - fill:
+      Material: F1-${grp}
+      Plant: "1010"
+      Costing Variant: PPC1
+      Costing Version: "1"
+      Costing Lot Size: "100"
+  - click: { text: Dates, role: tab }
+  - click: Default Values
+  - fill:
+      Costing Date From: ${today}
+      Costing Date To: ${yearEnd}
+  - press: Enter
+  - expectText: Cost of Goods Manufactured
+  - click: Save
+  - expectNoError: true
+
+  # Tasks 2-6: marking allowance, mark, release
+  - openApp: { title: Release Material Cost Estimates }
+  - manual: >
+      Check Marking Allowance: company code 1010 must allow costing variant PPC1 / version 1
+      for the current period (green indicator). If not, issue the allowance.
+  - fill:
+      Company Code: "1010"
+      Plant: "1010"
+      Material: F1-${grp}
+  - uncheck: Test Run
+  - press: F8
+  - expectMessage: { contains: updated successfully }
+  - press: F3
+  - click: Release
+  - fill:
+      Company Code: "1010"
+      Plant: "1010"
+      Material: F1-${grp}
+  - uncheck: Test Run
+  - press: F8
+  - expectMessage:
+      contains: updated successfully
+      capture: { var: priceChangeDoc, regex: "(3\\d{9})" }
+  - press: F3
+  - expectText: FR
+  - manual: Double-click F1-${grp} > Material Master > Costing 2 / Accounting 1 and review the new standard price.

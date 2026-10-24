@@ -1,0 +1,53 @@
+id: IEE2E-56
+exercise: 56
+title: "Create Technical Object (serial numbers / equipment)"
+tags: [unit9, cs, master-data]
+requires: [IEE2E-53]
+steps:
+  # 1. Serial number profile on F1-###
+  - openApp: { title: Change Material }
+  - fill: { label: Material, value: "F1-${grp}", enter: true }
+  - selectRow: { contains: General Plant Data / Storage 2, dialog: true }
+  - press: Enter
+  - fill:
+      dialog: true
+      fields:
+        Plant: "1010"
+  - press: Enter
+  - fill: { Serial Number Profile | SerialNoProfile: YSR1 }
+  - click: Save
+  - expectMessage: { regex: "changed|saved" }
+
+  # 2. Mass-create 10 serial numbers
+  - openApp: { title: Manage Material Serial Numbers }
+  - click: Mass Create
+  - fill:
+      dialog: true
+      fields:
+        Material: F1-${grp}
+        Category: S
+        Number of Serial Numbers: "10"
+  - click: { text: Mass Create, dialog: true }
+  - click: { text: [OK, Ok], dialog: true }
+  - fill: { Material: "F1-${grp}" }
+  - click: Go
+  - expectText: F1-${grp}
+
+  # 3. Customer data on the first serial number, then equipment view
+  - openRow: F1-${grp}
+  - click: Edit
+  - click: { text: Partners, role: tab }
+  - click: { text: Create, within: Partners }
+  - fill:
+      Partner Function: AG
+      Partner: IEE2E-${grp}
+      Special Stock: B
+      Customer: IEE2E-${grp}
+  - select: { label: Stock Type, value: Unrestricted Use }
+  - click: Save
+  - optional: true
+    click: { text: Close, dialog: true }
+  - click: Back
+  - select: { label: Equipment Data Exists, value: "Yes" }
+  - click: Go
+  - capture: { var: equipmentNo, from: cell, row: 1, column: Equipment, regex: "(\\d{6,18})" }

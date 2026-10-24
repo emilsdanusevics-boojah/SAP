@@ -1,0 +1,78 @@
+id: IEE2E-24
+exercise: 24
+title: "Create a Purchase Requisition"
+tags: [unit6, mm, purchasing]
+requires: [IEE2E-23]
+steps:
+  # 1. Default values for purchase requisitions
+  - openApp: { title: Default Settings for Users - Purchase Requisitions }
+  - name: User ID (only when the app asks for it)
+    optional: true
+    timeout: 3000
+    fill: { User ID: "${user}" }
+  - fill:
+      Plant: "1010"
+      Company Code: "1010"
+      Storage Location: 101C
+      Currency: EUR
+      Purchasing Group: "000"
+      Purchasing Org.: "1010"
+      Purchasing Document Type: NB
+      Cost Center: MAN-${grp}
+      Account Assignment Category: K
+  - click: Save
+  - expectNoError: true
+
+  # 2. First purchase requisition
+  - openApp: { title: Manage Purchase Requisitions - Professional }
+  - click: Create
+  - fill: { Purchase Requisition Descrip.: "FIRST PR GR${grp}" }
+  - click: [Create Material, Material]
+  - fill:
+      Account Assignment Cat.: K
+      Cost Center: MAN-${grp}
+      Material: R124-${grp}
+      Quantity Requested: "20"
+      Delivery Date: ${date(+10d)}
+  - click: Apply
+  - click: Create
+  - name: Confirm the delivery date dialog
+    optional: true
+    click: { text: Create, dialog: true }
+  - expectMessage:
+      regex: "\\d{8,10}"
+      capture: { var: prNo1, regex: "(\\d{8,10})" }
+
+  # 3. Change quantity to 50
+  - openApp: { title: Manage Purchase Requisitions - Professional }
+  - click: Go
+  - fill: { label: Search, value: "GR${grp}", enter: true }
+  - openRow: FIRST PR GR${grp}
+  - click: Edit
+  - openRow: R124-${grp}
+  - fill: { Quantity Requested: "50" }
+  - click: Apply
+  - click: Save
+  - expectNoError: true
+  - click: Back
+
+  # 4. Copy as second PR without account assignment
+  - selectRow: FIRST PR GR${grp}
+  - click: Copy
+  - clear: Purchase Requisition Descrip.
+  - fill: { Purchase Requisition Descrip.: "SECOND PR GR${grp}" }
+  - openRow: R124-${grp}
+  - clear: [Account Assignment Cat., Account Assignment Category]
+  - fill:
+      Quantity Requested: "200"
+      Delivery Date: ${date(+13d)}
+  - click: Apply
+  - click: Create
+  - optional: true
+    click: { text: Create, dialog: true }
+  - expectMessage:
+      regex: "\\d{8,10}"
+      capture: { var: prNo2, regex: "(\\d{8,10})" }
+
+  # 5. Joule
+  - manual: Open Joule and ask "Show purchase requisitions I have created"; open one and check it.

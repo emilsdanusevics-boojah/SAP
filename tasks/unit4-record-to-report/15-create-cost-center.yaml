@@ -1,0 +1,48 @@
+id: IEE2E-15
+exercise: 15
+title: "Create Cost Center (MAR-### and MAN-###)"
+tags: [unit4, co, master-data]
+steps:
+  - openApp: { title: Manage Cost Centers }
+  - click: Create
+  - optional: true
+    click: Full Screen
+  - fill:
+      Cost Center: MAR-${grp}
+      Name: Marketing IEE2E ${grp}
+      Description: Marketing IEE2E ${grp}
+      Valid From: ${yearStart}
+      Valid To: 31.12.2099
+      Person Responsible: ${user}
+      Cost Center Category: "9"
+      Standard Hierarchy Node: IEE2E
+      Company Code: "1010"
+      Profit Center: P9${grp}
+  - click: Create
+  - expectNoError: true
+  - click: Back
+
+  - click: Create
+  - optional: true
+    click: Full Screen
+  - fill:
+      Cost Center: MAN-${grp}
+      Name: Manuf. IEE2E ${grp}
+      Description: Manufacturing IEE2E ${grp}
+      Valid From: ${yearStart}
+      Valid To: 31.12.2099
+      Person Responsible: ${user}
+      Cost Center Category: F
+      Standard Hierarchy Node: IEE2E
+      Company Code: "1010"
+      Profit Center: P9${grp}
+  - click: Create
+  - expectNoError: true
+  - click: Back
+
+  - openApp: { title: Manage Cost Center Groups }
+  - fill: { Cost Center Group: IEE2E }
+  - click: Go
+  - click: { text: IEE2E, role: link }
+  - expectText: MAR-${grp}
+  - expectText: MAN-${grp}

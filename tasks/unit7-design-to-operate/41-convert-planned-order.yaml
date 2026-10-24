@@ -1,0 +1,34 @@
+id: IEE2E-41
+exercise: 41
+title: "Convert Planned Order and Release Production Order"
+tags: [unit7, pp, production]
+requires: [IEE2E-40]
+steps:
+  - openApp: { title: Manage Material Coverage }
+  - fill: { Material: "F1-${grp}" }
+  - click: Go
+  - openRow: F1-${grp}
+  - click: { inRow: Planned Order, text: Edit, role: button }
+  - click: Convert
+  - click: { text: [OK, Ok], dialog: true }
+  - expectText: Production Order
+
+  - openApp: { title: Manage Production Orders }
+  - name: First start - area of responsibility (Production Supervisor YB4, plant 1010)
+    optional: true
+    timeout: 5000
+    click: { text: [OK, Ok], dialog: true }
+  - optional: true
+    timeout: 5000
+    selectRow: YB4
+  - optional: true
+    timeout: 5000
+    click: Back
+  - fill: { Material: "F1-${grp}" }
+  - click: Go
+  - capture: { var: prodOrder, from: cell, row: 1, column: Production Order | Order, regex: "(\\d{6,12})" }
+  - expectText: Created
+  - openRow: ${prodOrder}
+  - click: Release
+  - expectText: Released
+  - manual: Edit Order > status (i) and check that PRT (printed) is set.

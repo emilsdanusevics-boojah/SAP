@@ -1,0 +1,50 @@
+id: IEE2E-49
+exercise: 49
+title: "Extend BP for Sales (FLCU00 + FLCU01)"
+tags: [unit8, sd, master-data]
+requires: [IEE2E-07]
+steps:
+  - openApp: { title: Manage Business Partner Master Data }
+  - fill: { Business Partner: "IEE2E-${grp}" }
+  - click: Go
+  - openRow: IEE2E-${grp}
+  - click: Edit
+
+  # Customer (Fin. Accounting)
+  - click: { text: Roles, role: tab }
+  - click: { text: Create, within: Roles }
+  - fillCell: { within: Roles, row: -1, column: BP Role, value: FLCU00 }
+  - openRow: FLCU00
+  - click: { text: Company Codes | Company Code, role: tab }
+  - click: { text: Create, within: Company Codes }
+  - fill:
+      Company Code: "1010"
+      Reconciliation Account: "12100000"
+      Sort Key: "001"
+      Payment Terms: "0001"
+  - click: Apply
+  - click: Apply
+
+  # Customer (Sales)
+  - click: { text: Roles, role: tab }
+  - click: { text: Create, within: Roles }
+  - fillCell: { within: Roles, row: -1, column: BP Role, value: FLCU01 }
+  - openRow: FLCU01
+  - click: { text: Sales Areas, role: tab }
+  - click: { text: Create, within: Sales Areas }
+  - fill:
+      Sales Organization: "1010"
+      Distribution Channel: "10"
+      Division: "00"
+      Currency: EUR
+      Incoterms: FH
+      Payment Terms: "0001"
+      Shipping Conditions: "00"
+      Customer Pricing Procedure | Cust. Pric. Procedure: "01"
+  - click: Apply
+  - click: { text: Taxes, role: tab }
+  - fillCell: { rowContains: Germany, column: Tax Classification, value: "1" }
+  - click: Apply
+  - click: Apply
+  - click: Save
+  - expectNoError: true

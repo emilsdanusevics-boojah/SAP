@@ -1,0 +1,19 @@
+id: IEE2E-40
+exercise: 40
+title: "Run MRP and Analyze Result"
+tags: [unit7, pp, planning]
+requires: [IEE2E-38, IEE2E-39]
+steps:
+  - openApp: { title: Monitor Material Coverage - Net Segments }
+  - fill: { Material: "*${grp}" }
+  - click: Go
+  - expectText: F1-${grp}
+  - screenshot: coverage-before
+  - selectRow: F1-${grp}
+  - click: Start MRP Run
+  - expectNoError: true
+  - click: Go
+  - selectRow: F1-${grp}
+  - click: Manage Materials
+  - expectText: Planned Order
+  - screenshot: coverage-after-mrp

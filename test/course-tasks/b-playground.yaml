@@ -1,0 +1,29 @@
+tasks:
+  - id: T-PLAY
+    exercise: 3
+    title: Sections, empty rows, label alternatives, row links, capture, manual
+    steps:
+      - openApp: { title: Playground }
+      - fill: { within: Header, fields: { Company Code: "1010" } }
+      - fill: { within: Line Items, fields: { Company Code: "2020" } }
+      - fillCell: { within: Line Items, firstEmpty: true, column: "Account | G/L Account", value: "11002000" }
+      - fill: { "Descr. | Material Description": "Lock ${grp}" }
+      - click: { inRow: Petty Cash, role: link }
+      - expectText: Drilled into Petty Cash
+      - click: { text: Create, index: -1 }
+      - expectMessage:
+          contains: "Saved 1010/2020/11002000/Lock 035"
+          capture: { var: docNo, regex: "document (\\d+)" }
+      - manual: A human looks at the T-account view
+  - id: T-FAIL
+    exercise: 4
+    title: Fails on purpose
+    steps:
+      - expectText: { text: this text does not exist, timeout: 1000 }
+        timeout: 1000
+  - id: T-BLOCKED
+    exercise: 5
+    title: Depends on the failing task
+    requires: [T-FAIL]
+    steps:
+      - log: should never run

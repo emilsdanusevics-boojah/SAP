@@ -1,0 +1,25 @@
+id: IEE2E-05
+exercise: 5
+title: "Display a Financial Statement (Segment 1000_C, PDF)"
+tags: [unit4, fi, reporting]
+steps:
+  - openApp: { title: Balance Sheet/Income Statement }
+  - fill:
+      Company Code: "1010"
+      Ledger: 0L
+      Statement Version: "1010"
+      Currency: EUR
+  - click: Go
+  - click: { text: Balance Sheet, role: tab }
+  - click: Expand All
+  - click: Collapse All
+  - addFilter: Segment
+  - fill: { Segment: 1000_C }
+  - click: Go
+  - click: Create PDF Preview
+  - check: Show G/L Accounts
+  - click: { text: Create, dialog: true }
+  - wait: 5000
+  - screenshot: pdf-preview
+  - name: Close the PDF tab
+    closePopups: true

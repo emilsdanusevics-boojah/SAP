@@ -1,0 +1,35 @@
+id: IEE2E-52
+exercise: 52
+title: "Create outbound delivery, post goods issues and analyze the impact"
+tags: [unit8, sd, shipping]
+requires: [IEE2E-51]
+steps:
+  - openApp: { title: Track Sales Orders }
+  - fill: { Sold-to Party | Sold to Party: "IEE2E-${grp}" }
+  - click: Go
+  - openRow: ${salesOrder}
+  - selectRow: { contains: "F1-${grp}", within: Items }
+  - click: Create Delivery
+  - click: { text: Create, dialog: true }
+  - expectMessage:
+      regex: "8\\d{7}"
+      capture: { var: deliveryNo, regex: "(8\\d{7})" }
+
+  - openApp: { title: Pick Outbound Delivery }
+  - fill: { label: Delivery, value: "${deliveryNo}", enter: true }
+  - fillCell: { row: 1, column: Picking Quantity | Picked Quantity, value: "10", enter: true }
+  - click: Save
+  - click: Post GI
+  - expectMessage:
+      regex: "4\\d{9}|GI Posted"
+      capture: { var: giMatDoc, regex: "(4\\d{9})" }
+
+  - openApp: { title: Manage Outbound Deliveries }
+  - fill: { Ship-to Party | Ship to Party: "IEE2E-${grp}" }
+  - optional: true
+    clear: Overall Status
+  - click: Go
+  - openRow: ${deliveryNo}
+  - click: Process Flow
+  - screenshot: process-flow
+  - manual: From Goods Issue, open Display Document Flow - Material Document and the T-account view (ledger 0L only).

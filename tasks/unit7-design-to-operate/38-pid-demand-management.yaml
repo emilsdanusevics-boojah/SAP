@@ -1,0 +1,65 @@
+id: IEE2E-38
+exercise: 38
+title: "Create PIR in Demand Management"
+tags: [unit7, pp, planning, gui]
+steps:
+  # Task 1: initial stock of the components (Post Goods Movement = MIGO)
+  - openApp: { title: Post Goods Movement }
+  - select: { combobox: 0, value: Goods Receipt }
+  - select: { combobox: 1, value: Other }
+  - fillCell: { row: 1, column: Mat. Short Text, value: "S11-${grp}" }
+  - fillCell: { row: 1, column: Qty in UnE, value: "500" }
+  - fillCell: { row: 1, column: SLoc, value: 101A }
+  - fillCell: { row: 1, column: Plnt, value: "1010" }
+  - fillCell: { row: 2, column: Mat. Short Text, value: "S12-${grp}" }
+  - fillCell: { row: 2, column: Qty in UnE, value: "500" }
+  - fillCell: { row: 2, column: SLoc, value: 101A }
+  - fillCell: { row: 2, column: Plnt, value: "1010" }
+  - fillCell: { row: 3, column: Mat. Short Text, value: "S13-${grp}" }
+  - fillCell: { row: 3, column: Qty in UnE, value: "500" }
+  - fillCell: { row: 3, column: SLoc, value: 101A }
+  - fillCell: { row: 3, column: Plnt, value: "1010" }
+  - fillCell: { row: 4, column: Mat. Short Text, value: "R14-${grp}" }
+  - fillCell: { row: 4, column: Qty in UnE, value: "500" }
+  - fillCell: { row: 4, column: SLoc, value: 101C }
+  - fillCell: { row: 4, column: Plnt, value: "1010" }
+  - fillCell: { row: 5, column: Mat. Short Text, value: "S15-${grp}" }
+  - fillCell: { row: 5, column: Qty in UnE, value: "1000" }
+  - fillCell: { row: 5, column: SLoc, value: 101B }
+  - fillCell: { row: 5, column: Plnt, value: "1010" }
+  - press: Enter
+  - name: Pick plant 1010 if asked for storage location / plant
+    optional: true
+    timeout: 3000
+    selectRow: { contains: "1010", dialog: true }
+  - click: Post
+  - expectMessage:
+      regex: "Material document \\d+ posted|\\d{10}"
+      capture: { var: initialStockDoc, regex: "(\\d{10})" }
+
+  # Task 2: area of responsibility
+  - openApp: { title: My Area of Responsibility - MRP Controller }
+  - selectRow: "001"
+  - click: [Assign, AOR Assigned]
+  - manual: Make sure only MRP controller 001 / plant 1010 is assigned (unassign others).
+
+  # Task 3: planned independent requirements
+  - openApp: { title: Maintain PIRs }
+  - fill:
+      Material: F1-${grp}
+      Plant: "1010"
+  - optional: true
+    select: { label: Period Indicator, value: Monthly }
+  - click: Go
+  - selectRow: F1-${grp}
+  - click: Create
+  - fill:
+      dialog: true
+      fields:
+        Version: "00"
+        Requirements Type: VSF
+  - check: { label: Version Active, dialog: true }
+  - click: { text: Create and Edit, dialog: true }
+  - manual: >
+      Enter draft PIR quantities for F1-${grp}: current month 0, next three months 100 each,
+      then save.

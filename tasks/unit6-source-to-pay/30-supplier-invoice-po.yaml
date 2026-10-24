@@ -1,0 +1,36 @@
+id: IEE2E-30
+exercise: 30
+title: "Post Invoice and Analyze Financial Impact"
+tags: [unit6, mm, invoice]
+requires: [IEE2E-29]
+steps:
+  - openApp: { title: Create Supplier Invoice }
+  - select: { label: Transaction, value: Invoice }
+  - fill:
+      Company Code: "1010"
+      Reference: IEE2E-INV-${grp}
+      Invoice Date: ${today}
+      Posting Date: ${today}
+      Gross Invoice Amount: ${num(2612.50)}
+      Currency: EUR
+  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - click: { text: PO References, role: tab }
+  - fill: { label: Purchase Order, value: "${poNo}", enter: true }
+  - fill: { Tax Code: 1I }
+  - name: Balance must be 0 (if not, the guide says adjust the gross amount)
+    expectText: "0,00"
+  - click: Simulate
+  - click: Post
+  - expectMessage:
+      regex: "created|posted"
+      capture: { var: poInvoice, regex: "(\\d{10})" }
+  - click: { text: "No", dialog: true }
+
+  - openApp: { title: Supplier Invoice List }
+  - fill: { Invoicing Party: "IEE2E-${grp}" }
+  - click: Go
+  - openRow: IEE2E-INV-${grp}
+  - click: Journal Entries
+  - screenshot: process-flow
+  - manual: Open "Display Journal Entries in T-Account View" (ledger 0L only) and review GR/IR clearing, payables and tax.
+  - closePopups: true

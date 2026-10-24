@@ -1,0 +1,8 @@
+id: IEE2E-28
+exercise: 28
+title: "Prepare Your User and Fiori Launchpad MM-IV"
+tags: [roles, unit6]
+description: Maintain Business Users - add the business role(s) to your own user. Z_S4C_GENERIC_ROLE is never removed.
+steps:
+  - assignBusinessRoles:
+      add: [BR_WAREHOUSE_CLERK]

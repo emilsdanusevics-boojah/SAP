@@ -1,0 +1,26 @@
+id: IEE2E-02
+exercise: 2
+title: "From Balance Sheet to the Posted Document"
+tags: [unit4, fi, reporting]
+description: Run the balance sheet for 1010, drill down from Petty Cash (10010000) to a journal entry.
+steps:
+  - openApp: { title: Balance Sheet/Income Statement }
+  - fill:
+      Company Code: "1010"
+      Ledger: 0L
+      Statement Version: "1010"
+      Currency: EUR
+  - name: Statement Type = Normal (Actual - Actual)
+    optional: true
+    select: { label: Statement Type, value: Normal }
+  - click: Go
+  - expectText: ASSETS
+  - click: Expand All
+  - fill: { label: Search, value: "10010000", enter: true }
+  - expectText: Petty Cash
+  - name: Select the Period Balance amount of Petty Cash
+    click: { inRow: Petty Cash, role: link }
+  - screenshot: related-apps
+  - manual: >
+      Open one of the related apps, select a journal entry number and choose
+      "Display Journal Entries - New Version", then switch to the T-Account View.

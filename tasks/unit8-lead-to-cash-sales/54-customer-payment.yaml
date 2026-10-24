@@ -1,0 +1,39 @@
+id: IEE2E-54
+exercise: 54
+title: "Process customer payment"
+tags: [unit8, fi-ar, payment]
+requires: [IEE2E-53]
+description: 10 x 2,850 EUR less 2 % plus 19 % tax = 33,236.70 EUR (set --var paymentAmount=... if your prices differ).
+vars:
+  paymentAmount: ${num(33236.70)}
+steps:
+  - openApp: { title: Post Incoming Payments }
+  - fill:
+      Company Code: "1010"
+      Posting Date: ${today}
+      Journal Entry Date: ${today}
+      Journal Entry Type: DZ
+  - fill:
+      within: Bank Data
+      fields:
+        G/L Account: "11002060"
+        Amount: ${paymentAmount}
+        Currency: EUR
+  - select: { label: Account Type, value: Customer }
+  - fill: { Account ID: "IEE2E-${grp}" }
+  - click: Propose Items
+  - click: { inRow: "${billingDoc}", text: Clear, role: button }
+  - press: Enter
+  - expectText: "0,00"
+  - click: Post
+  - expectMessage:
+      regex: "\\d{10}"
+      capture: { var: paymentJE, regex: "(\\d{10})" }
+
+  - openApp: { title: Manage Customer Line Items }
+  - fill:
+      Customer: IEE2E-${grp}
+      Company Code: "1010"
+  - select: { label: Status, value: All Items }
+  - click: Go
+  - expectText: ${paymentJE}

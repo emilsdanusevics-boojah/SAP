@@ -22,19 +22,28 @@ function loadDotEnv(file) {
 function getConfig(cli = {}) {
   loadDotEnv(path.join(process.cwd(), '.env'));
   const env = process.env;
+  const user = env.SAP_USER || '';
+  const stateDir = path.resolve(env.SAP_STATE_DIR || '.state');
   return {
     baseUrl: (env.SAP_BASE_URL || 'https://my414802.s4hana.cloud.sap').replace(/\/+$/, ''),
-    user: env.SAP_USER || '',
+    user,
     password: env.SAP_PASSWORD || '',
+    // The course's "###": explicit, or the last three digits of the user (F000035 -> 035).
+    group: env.SAP_GROUP || (user.match(/(\d{3})$/) || [])[1] || '',
     language: env.SAP_LANGUAGE || 'EN',
-    dateFormat: env.SAP_DATE_FORMAT || 'MM/DD/YYYY',
+    dateFormat: env.SAP_DATE_FORMAT || 'DD.MM.YYYY',
+    decimal: env.SAP_DECIMAL || ',',
     timeout: Number(env.SAP_TIMEOUT || 30000),
     headless: !cli.headed,
     slowMo: Number(cli.slowmo || 0),
     trace: !!cli.trace,
     manualLogin: !!cli.manualLogin || env.SAP_MANUAL_LOGIN === '1',
+    interactive: !!cli.interactive,
+    pauseOnFail: !!cli.pauseOnFail,
     outDir: path.resolve(cli.out || 'results'),
-    authFile: path.resolve(env.SAP_AUTH_FILE || '.auth/state.json'),
+    stateDir,
+    authFile: path.resolve(env.SAP_AUTH_FILE || path.join(stateDir, 'auth.json')),
+    appsFile: path.resolve('apps.yaml'),
     chromiumPath: env.CHROMIUM_PATH || undefined,
   };
 }

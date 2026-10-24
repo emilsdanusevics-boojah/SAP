@@ -1,0 +1,36 @@
+id: IEE2E-51
+exercise: 51
+title: "Create a sales order (10 x F1-###)"
+tags: [unit8, sd, sales]
+requires: [IEE2E-50]
+steps:
+  - openApp: { title: Manage Sales Orders }
+  - click: Create
+  - click: [Create Sales Order, Sales Order]
+  - fill:
+      dialog: true
+      fields:
+        Sales Order Type: OR
+        Sales Organization: "1010"
+        Distribution Channel: "10"
+        Division: "00"
+  - click: { text: [Continue, OK], dialog: true }
+  - fill:
+      Sold-to Party | Sold-To Party: IEE2E-${grp}
+      Cust. Reference | Customer Reference: 12${grp}
+  - capture: { var: requestedDeliveryDate, from: field, label: Req. Delivery Date | Requested Delivery Date }
+  - fillCell: { within: Items, row: 1, column: Product, value: "F1-${grp}" }
+  - fillCell: { within: Items, row: 1, column: Requested Quantity | Order Quantity, value: "10", enter: true }
+  - fillCell: { within: Items, row: 1, column: Item Category, value: TAN }
+  - openRow: F1-${grp}
+  - name: Price elements show the price and the 2% customer discount
+    optional: true
+    expectText: "2.850"
+  - fill: { Storage Location: 101A }
+  - click: Apply
+  - click: Create
+  - optional: true
+    click: { text: [OK, Ok, Continue], dialog: true }
+  - expectMessage:
+      regex: "\\d{6,10}"
+      capture: { var: salesOrder, regex: "(\\d{6,10})" }

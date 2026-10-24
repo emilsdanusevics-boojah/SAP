@@ -1,0 +1,38 @@
+id: IEE2E-19
+exercise: 19
+title: "Post an activity allocation"
+tags: [unit4, co, posting]
+requires: [IEE2E-15, IEE2E-17, IEE2E-18]
+steps:
+  - openApp: { title: Manage Direct Activity Allocation }
+  - click: Create
+  - optional: true
+    click: Full Screen
+  - fill:
+      Document Header Text: ${grp}_Direct Activity Alloc
+      Journal Entry Date: ${today}
+      Posting Date: ${today}
+      Translation Date: ${today}
+      Journal Entry Type: CO
+  - fillCell: { within: Allocation Items, row: 1, column: Sender Cost Center, value: "10101753" }
+  - fillCell: { within: Allocation Items, row: 1, column: Sender Activity Type, value: "IT${grp}" }
+  - fillCell: { within: Allocation Items, row: 1, column: Receiver Cost Center, value: "MAN-${grp}" }
+  - fillCell: { within: Allocation Items, row: 1, column: Quantity, value: "20", enter: true }
+  - expectText: "94311000"
+  - name: Add a second allocation row (Create in the Allocation Items toolbar, not the footer)
+    click: { text: Create, within: Allocation Items }
+  - fillCell: { within: Allocation Items, row: 2, column: Sender Cost Center, value: "10101753" }
+  - fillCell: { within: Allocation Items, row: 2, column: Sender Activity Type, value: "IT${grp}" }
+  - fillCell: { within: Allocation Items, row: 2, column: Receiver Cost Center, value: "MAR-${grp}" }
+  - fillCell: { within: Allocation Items, row: 2, column: Quantity, value: "10", enter: true }
+  - name: Save with Create in the footer
+    click: { text: Create, index: -1 }
+  - expectText: Journal Entr
+  - screenshot: allocation-posted
+
+  - openApp: { title: Cost Centers Plan/Actual }
+  - fill:
+      Plan Category: ACT01
+      Cost Center: "10101753"
+  - click: Go
+  - manual: Drag Activity Type below Cost Center in the navigation panel and check the IT${grp} allocations.

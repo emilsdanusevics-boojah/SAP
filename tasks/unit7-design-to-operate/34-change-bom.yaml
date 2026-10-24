@@ -1,0 +1,20 @@
+id: IEE2E-34
+exercise: 34
+title: "Change BOM for Semi-Finished Product S12-### (add lock)"
+tags: [unit7, pp, master-data, gui]
+requires: [IEE2E-23]
+steps:
+  - openApp: { title: Change Bill of Material }
+  - fill:
+      Material: S12-${grp}
+      Plant: "1010"
+      BOM Usage: "1"
+      Alternative BOM | Alternative: "1"
+      Valid From: ${monthStart}
+  - press: Enter
+  - fillCell: { firstEmpty: true, column: Item, value: "0040" }
+  - fillCell: { rowContains: "0040", column: ICt, value: L }
+  - fillCell: { rowContains: "0040", column: Component, value: "R124-${grp}" }
+  - fillCell: { rowContains: "0040", column: Quantity, value: "1", enter: true }
+  - click: Save
+  - expectMessage: { regex: "changed|saved" }

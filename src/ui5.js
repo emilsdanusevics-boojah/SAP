@@ -19,6 +19,26 @@ const MESSAGE_SELECTORS = [
   '.urMsgBarTxt',
 ].join(',');
 
+// Elements that wrap a whole titled area (object page section, form, panel,
+// dialog, tab). Used to scope a lookup with `within: "<section title>"`.
+const SECTION_SELECTORS = [
+  '.sapUxAPObjectPageSubSection',
+  '.sapUxAPObjectPageSection',
+  'section',
+  '[role="region"]',
+  '[role="dialog"]',
+  '[role="tabpanel"]',
+  '[role="group"]',
+  '[role="listitem"]',
+  '.sapFCard',
+  '.sapUiForm',
+  '.sapMPanel',
+  'fieldset',
+].join(',');
+
+// Whole page sections only (no cards/groups): for reading a section's content.
+const PAGE_SECTION_SELECTORS = '.sapUxAPObjectPageSection, section, [role="region"], .sapMPanel, [role="dialog"]';
+
 // Installed into every frame before any page script runs. Toasts vanish after
 // a few seconds, so we record every message as it appears instead of hoping to
 // catch it on screen later.
@@ -70,51 +90,87 @@ async function appFrame(page) {
 
 // Where to look for an element, most specific first: an open dialog in the
 // app frame, the app frame, an open dialog in the shell, the shell itself.
-async function searchScopes(page, which = 'auto', dialogOnly = false) {
+// `within` narrows each scope to the innermost section titled with that text.
+async function searchScopes(page, { frame = 'auto', dialogOnly = false, within } = {}) {
   const frames = [];
-  const app = which === 'main' ? null : await appFrame(page);
+  const app = frame === 'main' ? null : await appFrame(page);
   if (app) frames.push(app);
-  if (which !== 'app' || !app) frames.push(page.mainFrame());
+  if (frame !== 'app' || !app) frames.push(page.mainFrame());
   const scopes = [];
   for (const f of frames) {
     const dialogs = f.locator('[role="dialog"]:visible, [role="alertdialog"]:visible');
     if ((await dialogs.count().catch(() => 0)) > 0) scopes.push(dialogs.last());
     if (!dialogOnly) scopes.push(f);
   }
-  return scopes;
+  if (!within) return scopes;
+  // Every container holding the title, innermost first, so the lookup widens
+  // outward until the target is found (cards, sub-sections, sections...).
+  const narrowed = [];
+  for (const s of scopes) {
+    const containers = s.locator(SECTION_SELECTORS).filter({ has: s.getByText(within, { exact: true }) });
+    const n = await containers.count().catch(() => 0);
+    for (let i = n - 1; i >= Math.max(0, n - 6); i--) narrowed.push(containers.nth(i));
+  }
+  return narrowed;
+}
+
+// The page section titled `title` (for reading its content as a whole).
+async function sectionLocator(page, title) {
+  for (const s of await searchScopes(page)) {
+    const sec = s.locator(PAGE_SECTION_SELECTORS).filter({ has: s.getByText(title, { exact: true }) }).last();
+    if ((await sec.count().catch(() => 0)) > 0) return sec;
+  }
+  throw new Error(`Section "${title}" not found`);
 }
 
 // Try each locator builder in each scope until one yields a visible element.
-async function locate(page, builders, { timeout, what, frame = 'auto', index = 0, dialogOnly = false }) {
+async function locate(page, builders, { timeout, what, index = 0, ...scopeOpts }) {
   const deadline = Date.now() + timeout;
   for (;;) {
-    for (const scope of await searchScopes(page, frame, dialogOnly)) {
+    for (const scope of await searchScopes(page, scopeOpts)) {
       for (const build of builders) {
-        let loc;
         try {
-          loc = build(scope).filter({ visible: true }).nth(index);
+          const loc = build(scope).filter({ visible: true }).nth(index);
           if ((await loc.count()) > 0) return loc;
         } catch {
           // Frame detached mid-navigation or invalid selector for this scope; try next.
         }
       }
     }
-    if (Date.now() > deadline) throw new Error(`Could not find ${what} within ${timeout} ms`);
+    if (Date.now() > deadline) {
+      const where = scopeOpts.within ? ` in "${scopeOpts.within}"` : '';
+      throw new Error(`Could not find ${what}${where} within ${timeout} ms`);
+    }
     await page.waitForTimeout(300);
   }
 }
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-function fieldBuilders(label) {
+const FILLABLE =
+  'input:not([type="hidden"]):not([type="button"]):not([type="submit"]), textarea, select, [contenteditable="true"], ' +
+  '[role="textbox"], [role="combobox"], [role="searchbox"], [role="spinbutton"], [role="checkbox"]';
+
+// Only things you can type into (or UI5 wrappers holding one): a button
+// labelled "Search" must not win over the search field.
+function fieldBuilders(labels) {
+  return [].concat(labels).flatMap(fieldBuildersFor).map((build) => (s) => {
+    const loc = build(s);
+    return loc.and(s.locator(FILLABLE)).or(loc.filter({ has: s.locator('input:not([type="hidden"]), textarea') }));
+  });
+}
+
+function fieldBuildersFor(label) {
   const loose = new RegExp(`^\\s*${escapeRe(label)}\\s*[:*]?\\s*$`, 'i');
   const xpLabel = JSON.stringify(label); // valid XPath string literal unless label has both quote kinds
   return [
     (s) => s.getByLabel(label, { exact: true }),
     (s) => s.getByRole('textbox', { name: label, exact: true }),
     (s) => s.getByRole('combobox', { name: label, exact: true }),
+    (s) => s.getByRole('searchbox', { name: label, exact: true }),
     (s) => s.getByRole('spinbutton', { name: label, exact: true }),
     (s) => s.getByLabel(loose),
+    (s) => s.getByPlaceholder(label, { exact: true }),
     (s) => s.getByTitle(label, { exact: true }).locator('xpath=self::input|self::textarea'),
     // WebGUI / plain layouts: input that follows a text node equal to the label.
     (s) => s.locator(`xpath=//*[normalize-space(text())=${xpLabel}]/following::input[not(@type="hidden")][1]`),
@@ -122,13 +178,22 @@ function fieldBuilders(label) {
   ];
 }
 
-function clickBuilders(text, role) {
-  const roles = role ? [role] : ['button', 'link', 'tab', 'menuitem', 'option', 'treeitem', 'checkbox', 'radio'];
+function clickBuilders(texts, role) {
+  const roles = role ? [role] : ['button', 'link', 'tab', 'menuitem', 'menuitemradio', 'option', 'treeitem', 'checkbox', 'radio'];
+  const list = [].concat(texts);
   return [
-    ...roles.map((r) => (s) => s.getByRole(r, { name: text, exact: true })),
-    (s) => s.getByTitle(text, { exact: true }),
-    (s) => s.getByText(text, { exact: true }),
-    ...roles.slice(0, 2).map((r) => (s) => s.getByRole(r, { name: text })),
+    ...list.flatMap((t) => roles.map((r) => (s) => s.getByRole(r, { name: t, exact: true }))),
+    ...list.map((t) => (s) => s.getByTitle(t, { exact: true })),
+    ...list.map((t) => (s) => s.getByText(t, { exact: true })),
+    ...list.flatMap((t) => roles.slice(0, 2).map((r) => (s) => s.getByRole(r, { name: t }))),
+  ];
+}
+
+// Rows of sap.m tables/lists, grid tables and WebGUI tables.
+function rowBuilders(contains) {
+  return [
+    (s) => s.getByRole('row').filter({ hasText: contains }),
+    (s) => s.locator('tr, [role="listitem"], [role="option"], .sapMLIB').filter({ hasText: contains }),
   ];
 }
 
@@ -202,9 +267,11 @@ module.exports = {
   messageRecorderScript,
   appFrame,
   searchScopes,
+  sectionLocator,
   locate,
   fieldBuilders,
   clickBuilders,
+  rowBuilders,
   waitForUI5,
   settle,
   collectMessages,

@@ -1,0 +1,11 @@
+tasks:
+  - id: T-ROLES-1
+    exercise: 1
+    title: Add a role (found via launchpad search)
+    steps:
+      - assignBusinessRoles: { add: [BR_GL_ACCOUNTANT] }
+  - id: T-ROLES-2
+    exercise: 2
+    title: Remove others but keep Z_S4C_GENERIC_ROLE, add BR_PURCHASER
+    steps:
+      - assignBusinessRoles: { add: [BR_PURCHASER], removeOthers: true }

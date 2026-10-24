@@ -1,0 +1,42 @@
+id: IEE2E-12
+exercise: 12
+title: "Post and Analyze Asset Acquisition"
+tags: [unit4, fi-aa, posting]
+requires: [IEE2E-07, IEE2E-11]
+steps:
+  - openApp: { title: Create Supplier Invoice }
+  - fill:
+      Company Code: "1010"
+      Invoice Date: ${on(1, 7)}
+      Posting Date: ${today}
+      Reference: CNC Lathe ${grp}
+      Gross Invoice Amount: "44000"
+      Currency: EUR
+  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - click: Show More
+  - fill: { Text: "CNC Lathe ${grp}" }
+  - click: { text: Asset Items, role: tab }
+  - click: { text: Add, within: Asset Items }
+  - fillCell: { within: Asset Items, row: 1, column: Asset, value: "${assetNo}" }
+  - fillCell: { within: Asset Items, row: 1, column: Amount, value: "40000" }
+  - fillCell: { within: Asset Items, row: 1, column: Tax Code, value: 1I }
+  - fillCell: { within: Asset Items, row: 1, column: Asset Value Date, value: "${on(1, 7)}" }
+  - click: Simulate
+  - name: Accept warnings
+    optional: true
+    timeout: 3000
+    click: { text: [Continue, OK, Ok], dialog: true }
+  - expectText: "16002000"
+  - click: Post
+  - expectMessage:
+      regex: "created|posted"
+      capture: { var: assetInvoice, regex: "(\\d{10})" }
+  - click: { text: "No", dialog: true }
+
+  - openApp: { title: Manage Fixed Assets }
+  - click: Go
+  - openRow: ${assetNo}
+  - screenshot: asset-ledger-area
+  - manual: >
+      In Valuation, open depreciation area 1 > Value Display > Journal Entries and the
+      T-account view (16002000 debit 40,000 against 16014000), then repeat for area 32 (ledger 2L).

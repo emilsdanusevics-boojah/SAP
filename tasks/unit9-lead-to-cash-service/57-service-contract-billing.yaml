@@ -1,0 +1,53 @@
+id: IEE2E-57
+exercise: 57
+title: "Create a service contract and perform billing"
+tags: [unit9, cs, service]
+requires: [IEE2E-56]
+vars:
+  employee: ${user}   # override with --var employee=<your employee/BP id> if the user ID is not accepted
+steps:
+  - openApp: { title: Manage Service Contracts }
+  - click: Create
+  - fill:
+      Description: Service Contract ${grp}
+      Sold-to Party | Sold to Party: IEE2E-${grp}
+      External Reference: IEE2E-${grp}
+      Employee Responsible: ${employee}
+      Contract Start: ${monthStart(-1m)}
+      Contract End: ${yearEnd(+1y)}
+  - fillCell: { within: Items, row: 1, column: Product ID | Product, value: SRV_CONTRACT }
+  - fillCell: { within: Items, row: 1, column: Quantity, value: "1" }
+  - fillCell: { within: Items, row: 1, column: Equipment ID | Equipment, value: "${equipmentNo}" }
+  - openRow: SRV_CONTRACT
+  - click: Billing Plan
+  - screenshot: billing-plan
+  - click: Back
+  - click: Release All Items
+  - click: Save
+  - expectMessage:
+      regex: "\\d{6,10}"
+      capture: { var: serviceContract, regex: "(\\d{6,10})" }
+
+  - openApp: { title: Schedule Billing Document Request Creation (Service Contracts) }
+  - click: Create
+  - fill: { Job Name: "IEE2E-${grp}" }
+  - click: Step 2
+  - click: Step 3
+  - fill:
+      BDR Creation: "30"
+      Sold-to Party | Sold to Party: IEE2E-${grp}
+  - click: [Schedule, Go]
+  - wait: 20000
+  - click: Go
+  - expectText: IEE2E-${grp}
+  - manual: Open the job log (green check mark) and confirm the billing document requests were created.
+
+  - openApp: { title: Create Billing Documents }
+  - fill: { Sold-To Party | Sold-to Party: "IEE2E-${grp}" }
+  - click: Go
+  - click: [Select All, Select all]
+  - click: Create Billing Documents
+  - click: Save All
+  - expectMessage: { regex: "\\d{8}" }
+  - click: Process Flow
+  - screenshot: process-flow

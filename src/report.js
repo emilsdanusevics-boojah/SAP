@@ -13,7 +13,7 @@ function html(run, outDir) {
     .map(
       (t) => `
   <details class="task ${t.status}" ${t.status === 'failed' ? 'open' : ''}>
-    <summary><span class="badge">${t.status}</span> <b>${esc(t.id)}</b> ${esc(t.title)} <span class="dur">${secs(t.duration)}</span></summary>
+    <summary><span class="badge">${t.status}</span> ${t.exercise ? `Ex ${t.exercise} · ` : ''}<b>${esc(t.id)}</b> ${esc(t.title)} <span class="dur">${secs(t.duration)}</span></summary>
     ${t.error ? `<p class="err">${esc(t.error)}</p>` : ''}
     ${t.trace ? `<p>Trace: <code>${esc(rel(t.trace))}</code> — open with <code>npx playwright show-trace</code></p>` : ''}
     <table>
@@ -31,7 +31,7 @@ function html(run, outDir) {
   const vars = Object.entries(run.vars || {})
     .map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`)
     .join('');
-  return `<!doctype html><html><head><meta charset="utf-8"><title>SAP Task Test Report</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>IEE2E Test Report</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root { --bg:#fff; --fg:#1d2d3e; --muted:#5b738b; --line:#d9dee3; --pass:#256f3a; --fail:#aa0808; --warn:#8d5300; }
@@ -42,13 +42,14 @@ function html(run, outDir) {
   summary { cursor:pointer } .dur { color:var(--muted); float:right }
   .badge { text-transform:uppercase; font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid currentColor }
   .passed .badge, tr.passed td:nth-child(3) { color:var(--pass) } .failed .badge, tr.failed td:nth-child(3), .err { color:var(--fail) }
-  tr.warned td:nth-child(3) { color:var(--warn) } tr.skipped { color:var(--muted) }
+  .partial .badge, tr.warned td:nth-child(3), tr.manual td:nth-child(3) { color:var(--warn) }
+  .skipped .badge, tr.skipped { color:var(--muted) }
   table { border-collapse:collapse; width:100%; margin-top:8px; display:block; overflow-x:auto }
   th, td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--line); vertical-align:top }
   a { color:inherit }
 </style></head><body>
-<h1>SAP Task Test Report</h1>
-<div class="meta">${esc(run.baseUrl)} · user ${esc(run.user || '(session)')} · ${new Date(run.startedAt).toLocaleString()} ·
+<h1>IEE2E Exercise Test Report</h1>
+<div class="meta">${esc(run.baseUrl)} · user ${esc(run.user || '(session)')} · group ${esc(run.group || '?')} · ${new Date(run.startedAt).toLocaleString()} ·
 <b>${passed}/${run.tasks.length} passed</b> · ${secs(run.finishedAt - run.startedAt)}</div>
 ${run.fatal ? `<p class="err"><b>Run aborted:</b> ${esc(run.fatal)}</p>` : ''}
 ${rows}
@@ -59,7 +60,8 @@ ${vars ? `<h2>Captured / run variables</h2><table><tr><th>Name</th><th>Value</th
 function junit(run) {
   const cases = run.tasks
     .map((t) => {
-      const body = t.status === 'failed' ? `<failure message="${esc(t.error)}"/>` : '';
+      const body =
+        t.status === 'failed' ? `<failure message="${esc(t.error)}"/>` : t.status === 'skipped' ? `<skipped message="${esc(t.error)}"/>` : '';
       return `  <testcase classname="sap.tasks" name="${esc(`${t.id} ${t.title}`)}" time="${(t.duration || 0) / 1000}">${body}</testcase>`;
     })
     .join('\n');

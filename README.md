@@ -1,158 +1,203 @@
-# SAP Fiori task tester
+# SAP IEE2E exercise tester
 
-Walks through SAP S/4HANA Cloud learning exercises, step by step, the way a student
-would, and reports which steps pass or fail. You write each exercise as a short YAML
-file. The runner logs in, opens the apps, fills fields, clicks buttons, checks the
-system messages, and records document numbers for the next exercises.
+Automates the exercises of the SAP course **IEE2E, "Exploring End-to-End Business Processes in SAP"**
+(course version 2608, 57 exercises), on the practice tenant
+`https://my414802.s4hana.cloud.sap`. It works through each exercise the way a student
+would, records the document numbers the course asks you to note, and reports pass or
+fail for every step.
 
-Default target: `https://my414802.s4hana.cloud.sap/ui#Shell-home`
+| Unit | Folder | Exercises |
+|---|---|---|
+| 4 Record-to-Report (FI, AP, AA, CO) | `tasks/unit4-record-to-report` | 1–20 |
+| 6 Source-to-Pay (MM) | `tasks/unit6-source-to-pay` | 21–31 |
+| 7 Design-to-Operate (PP) | `tasks/unit7-design-to-operate` | 32–46 |
+| 8 Lead-to-Cash, Sales (SD) | `tasks/unit8-lead-to-cash-sales` | 47–54 |
+| 9 Lead-to-Cash, Service (CS) | `tasks/unit9-lead-to-cash-service` | 55–57 |
+
+> **Status:** I wrote the task files from the exercise guide without access to the tenant.
+> I've tested the runner against an offline imitation of the launchpad (`npm run selftest`),
+> but not against the real system. Expect to adjust some field labels and buttons on the
+> first run; [Tuning a task](#tuning-a-task) shows how.
 
 ## Setup
 
 ```bash
 npm install
-npx playwright install chromium       # first time only
-cp .env.example .env                  # then put your SAP_USER / SAP_PASSWORD in .env
+npx playwright install chromium
+cp .env.example .env      # then set SAP_USER, SAP_PASSWORD, and check SAP_GROUP / SAP_DATE_FORMAT
 ```
 
-`.env` holds your practice-system login. It is git-ignored, so keep it that way.
-After the first login, the session is saved in `.auth/state.json` and reused until
-it expires.
-
-If the tenant asks for MFA or a first-time password change, log in once by hand:
-
-```bash
-node run.js --headed --manual-login
-```
+- **`SAP_GROUP`** is the course's `###`. Leave it empty to use the last three digits
+  of the user (for example, `F000035` gives `035`).
+- **`SAP_DATE_FORMAT`** and **`SAP_DECIMAL`** must match your SAP user settings.
+  The default is `DD.MM.YYYY` with a comma as the decimal separator.
+- Credentials and the saved login session stay local, in `.env` and `.state/`.
+  Both are git-ignored.
 
 ## Running
 
 ```bash
-node run.js                         # all tasks in ./tasks
-node run.js tasks/01-create-sales-order.yaml
-node run.js --grep sales            # by id, title or tag
-node run.js --headed --slowmo 300   # watch it happen
-node run.js --trace                 # per-task Playwright trace for debugging
-node run.js --var salesOrder=1234   # supply a value an earlier task would capture
-node run.js --validate              # check YAML files only, no browser
-npm run selftest                    # run the example tasks against an offline mock launchpad
+node run.js --list                          # all exercises, in order
+node run.js                                 # run everything (Unit 4 -> 9)
+node run.js --grep unit6                    # one unit (tags: unit4, unit6, fi-ap, co, mm, pp, sd, cs, roles ...)
+node run.js --grep "^IEE2E-0(3|4)$"         # specific exercises
+node run.js --headed --slowmo 250           # watch it in a browser window
+npm run test:headed                         # headed + waits for you at manual steps + inspector on failure
+node run.js --show-state                    # values captured so far (PO, sales order, asset ...)
 ```
 
-Output goes to `results/`:
-- `report.html`: one row per task, with each step's status, timing, error and screenshot.
-- `results.json`: the same data, machine-readable.
-- `junit.xml`: for CI.
-- A screenshot of every failing step.
+Results go to `results/`:
+- `report.html`: every exercise and step, with failure screenshots and the captured values.
+- `results.json`
+- `junit.xml`
 
-The exit code is 0 only if every task passed.
+### How exercises chain together
 
-## Writing a task from an exercise sheet
+The course builds on itself. For example, the supplier from exercise 7 is used again in
+exercises 8, 9, 12, 22, 25, 49 and 54, and the purchase order from exercise 27 is used
+in exercises 29 and 30. To support this:
 
-Map each sentence of the exercise to one step:
+- Each document number the guide asks you to note is captured into a variable, such as
+  `poNo`, `salesOrder` or `assetNo`. It's saved in `.state/vars.json`, so a later run
+  can pick up where an earlier one stopped.
+- `requires:` lists the exercises a task depends on. If one of those fails in the
+  current run, the dependent task is reported as *skipped* instead of failing in a
+  confusing way.
+- `node run.js --validate` warns when a task uses a value that no earlier exercise
+  captures.
+- You can supply any value by hand, for example `--var poNo=4500001234`.
+- `--reset-state` forgets all saved values, for a fresh pass with a new group number.
 
-| Exercise says | Step |
-|---|---|
-| Open the app *Create Sales Orders* | `- openApp: SalesOrder-create` or `- openApp: { title: Create Sales Orders }` |
-| Start transaction VA03 | `- transaction: VA03` |
-| Enter *1710* in *Sales Organization* | `- fill: { Sales Organization: "1710" }` |
-| Choose *Standard Order* from the dropdown | `- select: { label: Order Type, value: Standard Order }` |
-| Choose *Save* / *Go* / *Continue* | `- click: Save` |
-| Press Enter | `- press: Enter` |
-| Enter *TG11* in the first item row | `- fillCell: { row: 1, column: Material, value: TG11 }` |
-| Note the document number | `- expectMessage: { regex: "Order (\\d+) has been saved", capture: { var: orderNo, regex: "Order (\\d+)" } }` |
-| Check the field shows X | `- expectField: { label: Net Value, value: "100.00" }` |
-| Check X appears on screen | `- expectText: X` |
+Note that re-running an exercise that creates master data (business partner, cost
+center, G/L account, material) will fail, because the object already exists. That
+is expected.
+
+### Manual steps
+
+Some steps can't sensibly be automated. These are marked `manual:` in the task files:
+- Exercise 18: preparing the Excel template.
+- Joule prompts.
+- Drag-and-drop in analytical reports.
+- Reading T-account views.
+- A few unusual dialogs (exercises 29, 37, 38).
+
+By default a manual step is reported as **manual** and the run continues, so the
+exercise shows as *partial*. With `--headed --interactive`, the run stops at each manual
+step. Do the step in the browser, then press Enter in the terminal to continue.
+
+### Course-specific notes
+
+- **Role exercises** (1, 6, 10, 14, 21, 28, 32, 45, 47, 55) use a built-in
+  Maintain Business Users flow. Roles that are already assigned are skipped.
+  `Z_S4C_GENERIC_ROLE` is never removed; the code refuses to, even in exercise 47,
+  which removes the earlier roles.
+- **Exercise 13** posts the 2L entry directly, not through "Similar Journal Entry".
+  The postings are the same.
+- **Exercise 16** stays in display mode. It doesn't open Edit just to view the
+  value help.
+- **Exercise 18** needs the adapted course file. Set `F2121_FILE` in `.env` to its path.
+- **Exercise 31**: the payment run ID `IE###` must be unique for each run date.
+- **Exercise 33** switches F1-### to make-to-stock. The guide warns not to do this while
+  a parallel Controlling training is using the system.
+- **Exercise 48** only applies to a standalone Sales workshop. It is skipped unless named:
+  `--grep IEE2E-48`.
+
+## Tuning a task
+
+When a step fails, the report shows the error and a screenshot. To fix it:
+
+1. Re-run that exercise with `--headed --pause-on-fail`. The Playwright inspector
+   opens at the failing step, and you can use its *Pick locator* tool on the element.
+2. Edit the YAML. Usually that means changing a label (alternatives can be written
+   `"Label A | Label B"`), adding `within: <section title>` to target the right
+   section, or using a `selector:`.
+3. Optionally, pin the app's launchpad link in `apps.yaml` to skip the search.
+
+`npx playwright codegen https://my414802.s4hana.cloud.sap/ui` records your clicks and
+suggests selectors.
+
+## Task file format
 
 ```yaml
-id: SD-01                      # unique, shows in the report
-title: Create a standard sales order
-tags: [sales]
-vars:                          # usable as ${name}
-  soldTo: "17100001"
+id: IEE2E-08
+exercise: 8
+title: "Post a Vendors Invoice and Analyze the Impact"   # quote titles containing ###
+tags: [unit4, fi-ap]
+requires: [IEE2E-07]
+vars: { amount: "2200" }
 steps:
-  - openApp: SalesOrder-create
-  - fill:
-      Order Type: OR
-      Sales Organization: "1710"
-  - press: Enter
-  - name: Header data          # optional label for the report
-    fill: { Sold-To Party: "${soldTo}", Cust. Reference: "PO-${rand}" }
-  - click: Save
-  - expectMessage: { contains: "has been saved", capture: { var: salesOrder } }
+  - openApp: { title: Create Supplier Invoice }      # launchpad search (cached), or { hash: ... }
+  - fill: { Company Code: "1010", Invoice Date: "${today}" }
+  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - fillCell: { within: G/L Account Items, row: 1, column: G/L Account, value: "65100${grp}" }
+  - click: Post
+  - expectMessage: { regex: "created", capture: { var: apInvoice1, regex: "(\\d{10})" } }
 ```
 
-Quote values that look like numbers (`"0010"`), or YAML drops the leading zeros.
+Inside `{ ... }`, quote any value that contains `${...}`.
 
-### All actions
+### Actions
 
-| Action | Argument |
+| Action | What it does |
 |---|---|
-| `openApp` | hash string, or `{ hash, params }`, or `{ title }` (uses launchpad search) |
-| `transaction` | GUI transaction code, opened inside the launchpad |
-| `home`, `back` | none |
-| `fill` | `{ label, value }`, or a map `{ Label: value, ... }`. Options: `selector`, `enter: true`, `type: true` (sends real keystrokes), `frame: app\|main` |
-| `select` | `{ label, value }` for a dropdown or combo box |
-| `check` / `uncheck` | checkbox label |
-| `click` | button, link or tab text, or `{ text, role, index, selector, dialog: true, double: true }` |
-| `fillCell` | `{ row, column, value, enter }`. Row is 1-based, column is the header text |
-| `press` | key name (`Enter`, `F8`, `Control+S`), or `{ key, label }` |
-| `wait` | milliseconds |
-| `waitFor` | text, or `{ text \| selector, state: hidden }` |
-| `expectText` | text, or `{ text, exact, not: true }` |
-| `expectField` | `{ label, value }`, `{ label, contains }`, or `{ label, notEmpty: true }` |
-| `expectMessage` | text, or `{ contains \| regex, notContains, capture: { var, regex } }` |
-| `expectNoError` | none. Fails if an error message box or strip is visible |
-| `capture` | `{ var, from: message\|field\|text\|url, label, selector, regex }` |
-| `set` | `{ name: value }` |
-| `screenshot` | file name |
-| `log` | note to print |
-| `pause` | opens the Playwright inspector (use with `--headed`) |
+| `openApp` | Opens an app: `{ title }` uses the launchpad search (cached), or give a `hash` |
+| `transaction` | Opens a classic GUI transaction code inside the launchpad |
+| `home`, `back`, `refresh` | Launchpad home, browser back, reload (F5) |
+| `fill` | Fills fields by label: `{ Label: value, ... }` or `{ label, value }`. Options: `within`, `index`, `dialog`, `enter`, `type`. Write alternative labels as `A \| B` |
+| `clear` | Empties a field |
+| `select` | Picks a dropdown or combo box value: `{ label, value }`, or `{ combobox: n, value }` for unlabelled dropdowns (GUI) |
+| `check` / `uncheck` | Sets a checkbox by label |
+| `click` | Clicks a button, link, tab or menu item: text, or `[A, B]` alternatives. Options: `within`, `dialog`, `inRow`, `role`, `index` (-1 is the last match) |
+| `selectRow` | Ticks the table row(s) containing a text (`contains`, `within`, `dialog`) |
+| `openRow` | Navigates into the row containing a text (">" or a click on the row) |
+| `fillCell` | Fills a table cell by column header. Pick the row with `row` (1-based; -1 is the last), `rowContains`, or `firstEmpty` |
+| `clickCell` | Clicks the link or button in a table cell |
+| `addFilter` | Adapt Filters: finds the filter, ticks it, OK |
+| `upload` | Sets a file on the page's file input |
+| `press` | Presses a key: `Enter`, `F3`, `F8`, `Control+S` ... |
+| `wait`, `waitFor` | Pauses, or waits for text or an element |
+| `expectText` | Text must be visible (`within`, `not`) |
+| `expectField` | A field's value must match (`value` / `contains` / `notEmpty`) |
+| `expectMessage` | A success/status message must appear; can `capture` a number from it |
+| `expectNoError` | Fails if an error message is shown |
+| `capture` | Saves a variable `from:` a message, field, cell, text or URL |
+| `set` | Sets variables directly |
+| `assignBusinessRoles` | The Maintain Business Users flow: `{ add: [...], removeOthers }` |
+| `manual` | A step done by a human (see [Manual steps](#manual-steps)) |
+| `screenshot`, `log`, `closePopups`, `pause` | Utilities |
 
-Any step can also have:
+Any step can also carry:
 - `name`: the label shown in the report.
 - `optional: true`: a failure becomes a warning and the task continues.
 - `timeout`: in milliseconds.
 
-### Built-in variables
+### Variables
 
-| Variable | Value |
+| Variable | Meaning |
 |---|---|
-| `${today}`, `${date(+7)}` | Dates in `SAP_DATE_FORMAT`. Set this to match your SAP user settings. |
-| `${rand}` | A random 6-digit number. |
-| `${timestamp}` | The current time, as `yyyymmddhhmmss`. |
-| `${env.NAME}` | The value of environment variable `NAME`. |
-
-A value captured in one task stays available to the tasks after it in the same run.
-
-## How elements are found
-
-A field is found by its **on-screen label**, tried in this order:
-1. The accessible label (UI5 controls).
-2. A textbox or combo-box name.
-3. The label with trailing `:` or `*` ignored.
-4. The tooltip.
-5. The first input after matching label text (classic WebGUI screens).
-
-The runner searches an open dialog first, then the app's iframe (GUI transactions
-run inside one), then the launchpad shell. After each action it waits until UI5
-reports idle.
-
-Labels depend on the logon language, so the runner logs on with `SAP_LANGUAGE`
-(default `EN`).
-
-If a label is ambiguous or missing, use a `selector:` instead. To find one, run
-`npx playwright codegen https://my414802.s4hana.cloud.sap/ui`, click the element,
-and copy the selector it suggests.
+| `${grp}`, `${user}` | Your course number and your logon user |
+| `${today}`, `${date(+10d)}`, `${date(+3m)}` | Today, or offset by days (d), months (m) or years (y) |
+| `${monthStart}`, `${monthStart(-1m)}`, `${monthEnd}` | First or last day of a month |
+| `${yearStart}`, `${yearEnd(+1y)}` | First or last day of a year |
+| `${day(15, -1m)}` | The 15th of last month |
+| `${on(1, 7)}` | January 7 of the current year |
+| `${today\|YYYYMMDD}` | Any date variable in an explicit format |
+| `${year}`, `${year(-1)}`, `${month}` | Current year (with offset) and month |
+| `${num(2612.50)}` | A number written with your decimal separator |
+| `${rand}`, `${timestamp}`, `${env.NAME}` | Random number, current time, environment variable |
+| `${name}` | Anything set in `vars`, passed with `--var`, or captured by an earlier task |
 
 ## Layout
 
 ```
-run.js            CLI
-src/runner.js     loads tasks, runs steps, handles failures
-src/actions.js    the step actions listed above
-src/ui5.js        Fiori/UI5 helpers: iframe detection, element lookup, idle waits, message capture
-src/login.js      SAP Cloud Identity login and classic SAP logon, with session reuse
-src/report.js     HTML, JSON and JUnit reports
-tasks/            example exercises (sales order create, display, manage)
-test/             offline mock launchpad and self-test
+run.js              CLI
+src/runner.js       loads tasks, order/prerequisites, runs steps, validation
+src/actions.js      the actions above
+src/ui5.js          Fiori/UI5/WebGUI helpers (iframes, sections, rows, idle waits, messages)
+src/login.js        SAP Cloud Identity / classic logon with session reuse
+src/state.js        values and app links kept between runs (.state/)
+src/vars.js         ${...} variables and course date rules
+src/report.js       HTML / JSON / JUnit reports
+tasks/              the 57 course exercises, by unit
+test/               offline mock launchpad + self-test (npm run selftest)
 ```

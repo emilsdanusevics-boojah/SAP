@@ -1,0 +1,38 @@
+id: IEE2E-23
+exercise: 23
+title: "Create Product Master Record R124-### (lock)"
+tags: [unit6, mm, master-data, gui]
+description: Create Material is a classic GUI transaction (MM01) shown inside the launchpad.
+steps:
+  - openApp: { title: Create Material }
+  - fill:
+      Material: R124-${grp}
+      Industry Sector: M
+      Material Type: ROH
+  - fill: { label: Material, index: 1, value: "R122-${grp}" }
+  - press: Enter
+  - selectRow: { contains: [Basic Data 1, Purchasing, Accounting 1, Costing 2], dialog: true }
+  - click: { text: [Org. Levels, Org. Levels (F6)], dialog: true }
+  - fill: { label: Plant, value: "1010", dialog: true }
+  - fill: { label: Plant, index: 1, value: "1010", dialog: true }
+  - press: Enter
+  - fill:
+      fields:
+        Descr. | Material Description: Lock IEE2E-${grp}
+        Gross Weight: "500"
+        Weight unit | Unit of Weight: g
+        Net Weight: "500"
+  - press: Enter
+  - click: { text: Purchasing, role: tab }
+  - fill: { Purchasing Group: "000" }
+  - press: Enter
+  - name: Confirm the purchasing value key warning
+    press: Enter
+  - click: { text: Accounting 1, role: tab }
+  - fill:
+      Price Control: S
+      Standard Price: "10"
+  - press: Enter
+  - click: { text: Costing 2, role: tab }
+  - click: Save
+  - expectMessage: { contains: created }

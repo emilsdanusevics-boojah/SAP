@@ -1,0 +1,41 @@
+id: IEE2E-11
+exercise: 11
+title: "Create Asset Master Record (CNC lathe ###)"
+tags: [unit4, fi-aa, master-data]
+steps:
+  # 1. Default company code 1010 in the user settings
+  - name: Open the user menu
+    click: { selector: "#meAreaHeaderButton, #userActionsMenuHeaderButton, [id$='meAreaHeaderButton'], ui5-avatar" }
+  - click: Settings
+  - click: Default Values
+  - fill: { label: Company Code, value: "1010", dialog: true }
+  - click: { text: Save, dialog: true }
+
+  # 2. Asset master record
+  - openApp: { title: Manage Fixed Assets }
+  - click: Create
+  - fill:
+      dialog: true
+      fields:
+        Company Code: "1010"
+        Asset Class: "2000"
+  - click: { text: [OK, Ok], dialog: true }
+  - fill: { Description: "CNC lathe ${grp}" }
+  - click: Time-Dependent
+  - fill: { Cost Center: "BIKEA-${grp}" }
+  - click: Create
+  - expectMessage:
+      regex: "\\d{6,12}-\\d"
+      capture: { var: assetNo, regex: "(\\d{6,12}-\\d+)" }
+  - click: Back
+  - click: Go
+  - expectText: CNC lathe ${grp}
+
+  # 3. Useful life 10 years in areas 01 and 15
+  - openRow: ${assetNo}
+  - click: Edit
+  - fillCell: { within: Valuation, rowContains: Book Depreciation, column: Useful Life, value: "10" }
+  - name: Depreciation area 15
+    fillCell: { within: Valuation, row: 2, column: Useful Life, value: "10" }
+  - click: Save
+  - expectNoError: true

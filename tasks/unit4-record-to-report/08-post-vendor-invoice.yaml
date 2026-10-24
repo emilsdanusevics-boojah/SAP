@@ -1,0 +1,51 @@
+id: IEE2E-08
+exercise: 8
+title: "Post a Vendors Invoice and Analyze the Impact"
+tags: [unit4, fi-ap, posting]
+requires: [IEE2E-07]
+steps:
+  - openApp: { title: Create Supplier Invoice }
+  - fill:
+      Company Code: "1010"
+      Invoice Date: ${today}
+  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - fill:
+      Gross Invoice Amount: "2200"
+      Currency: EUR
+      Reference: ${grp}
+  - press: Enter
+  - name: Re-check if the reference is reported as duplicate
+    optional: true
+    timeout: 3000
+    click: Check
+  - fillCell: { within: G/L Account Items, row: 1, column: G/L Account, value: "65100${grp}" }
+  - fillCell: { within: G/L Account Items, row: 1, column: Amount, value: "2000" }
+  - click: Show Details
+  - fill:
+      Tax Code: 1I
+      Cost Center: BIKEA-${grp}
+  - click: Check
+  - expectMessage: successfully checked
+  - click: Post
+  - expectMessage:
+      regex: "created|posted"
+      capture: { var: apInvoice1, regex: "(\\d{10})" }
+  - name: Do not enter another invoice
+    click: { text: "No", dialog: true }
+
+  - openApp: { title: Display Supplier Balances }
+  - fill:
+      Supplier: IEE2E-${grp}
+      Company Code: "1010"
+      Fiscal Year: ${year}
+  - click: Go
+  - screenshot: supplier-balances
+
+  - openApp: { title: Manage Supplier Line Items }
+  - fill:
+      Supplier: IEE2E-${grp}
+      Company Code: "1010"
+  - select: { label: Status, value: All Items }
+  - click: Go
+  - expectText: IEE2E-${grp}
+  - screenshot: supplier-line-items

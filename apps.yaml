@@ -1,0 +1,7 @@
+# Optional: pin the launchpad link of an app so the runner skips the search.
+# Apps are otherwise found by title via the launchpad search, and the link
+# found is cached in .state/apps.json. To pin one, open the app and copy the
+# part of the URL after "#" (up to "&/" if present), e.g.:
+#
+# Manage Sales Orders: SalesOrder-manage
+# Create Supplier Invoice: SupplierInvoice-create

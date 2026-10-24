@@ -1,0 +1,68 @@
+id: IEE2E-25
+exercise: 25
+title: "Process RFQ and Quotation"
+tags: [unit6, mm, sourcing]
+requires: [IEE2E-22, IEE2E-23]
+steps:
+  # 1. RFQ
+  - openApp: { title: Manage RFQs }
+  - click: Create
+  - click: [Int. Sourcing Req., Internal Sourcing Request]
+  - fill:
+      RFQ Description: Request for Price ${grp}
+      Quotation Deadline: ${today}
+      Purchasing Organization: "1010"
+      Company Code: "1010"
+      Purchasing Group: "000"
+  - select: { label: Follow-On Document Type, value: Quantity Contract }
+  - fill:
+      Validity Per. Start | Validity Period Start: ${today}
+      Validity Period End: ${date(+3m)}
+  - click: { text: Delivery and Payment Terms, role: tab }
+  - fill:
+      Target Value: "3000"
+      Currency: EUR
+  - fillCell: { within: Items, row: 1, column: Material, value: "R124-${grp}" }
+  - fillCell: { within: Items, row: 1, column: Plant, value: "1010" }
+  - fillCell: { within: Items, row: 1, column: Requested Quantity, value: "300" }
+  - check: Info Record Update
+  - click: { text: Create, within: Bidders }
+  - fillCell: { within: Bidders, row: 1, column: Supplier, value: "IEE2E-${grp}" }
+  - click: { text: Create, within: Bidders }
+  - fillCell: { within: Bidders, row: 2, column: Supplier, value: "10300002" }
+  - click: { text: Create, index: -1 }
+  - click: Publish
+  - expectMessage:
+      regex: "\\d{10}"
+      capture: { var: rfqNo, regex: "(\\d{10})" }
+
+  # 2. Quotations from both bidders
+  - openApp: { title: Manage RFQs }
+  - fill: { label: Search, value: "${rfqNo}", enter: true }
+  - openRow: ${rfqNo}
+  - click: { text: Bidders, role: tab }
+  - selectRow: IEE2E-${grp}
+  - click: Create Quotation
+  - click: { text: Items, role: tab }
+  - fillCell: { within: Items, rowContains: "R124-${grp}", column: Net Order Price, value: "${num(9.50)}" }
+  - click: Create
+  - click: Back
+  - selectRow: "10300002"
+  - click: Create Quotation
+  - click: { text: Items, role: tab }
+  - fillCell: { within: Items, rowContains: "R124-${grp}", column: Net Order Price, value: "11" }
+  - click: Create
+  - click: Back
+  - click: { text: Quotations, role: tab }
+  - expectText: IEE2E-${grp}
+  - expectText: "10300002"
+
+  # 3. Compare and award
+  - openApp: { title: Compare Supplier Quotations }
+  - select: { label: RFQ, value: "${rfqNo}" }
+  - selectRow: IEE2E-${grp}
+  - selectRow: "10300002"
+  - click: Compare
+  - name: Award the best bid (Bicycle Supplies / IEE2E-${grp})
+    click: { text: Award, within: "IEE2E-${grp}" }
+  - expectNoError: true

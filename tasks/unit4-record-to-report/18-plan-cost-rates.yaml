@@ -1,0 +1,20 @@
+id: IEE2E-18
+exercise: 18
+title: "Plan rates for cost center / activity type (upload)"
+tags: [unit4, co, planning, upload]
+description: |
+  Needs the course file F2121_PlanCostRateTemplate.xlsx, adapted per the guide
+  (Activity Type IT###, From/To Fiscal Year) and saved as F2121_###_PlanCostRate.xlsx.
+  Point F2121_FILE in .env at that file.
+steps:
+  - manual: Prepare F2121_${grp}_PlanCostRate.xlsx from the course template and set F2121_FILE in .env
+  - openApp: { title: Manage Cost Rates - Plan }
+  - click: Upload
+  - upload: { file: "${env.F2121_FILE}" }
+  - click: { text: Upload, dialog: true }
+  - optional: true
+    click: { text: [OK, Ok], dialog: true }
+  - fill: { Activity Type: "IT${grp}" }
+  - click: Go
+  - expectText: IT${grp}
+  - expectText: "10101753"

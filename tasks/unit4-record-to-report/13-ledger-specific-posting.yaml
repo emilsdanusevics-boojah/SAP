@@ -1,0 +1,73 @@
+id: IEE2E-13
+exercise: 13
+title: "Create a Ledger-Specific Posting (0L and 2L)"
+tags: [unit4, fi, posting]
+description: |
+  The guide creates the 2L entry via Manage Journal Entries > New > Similar Journal Entry;
+  this task posts it directly with the same data, which gives the same result.
+steps:
+  - openApp: { title: Post General Journal Entries }
+  - fill:
+      Journal Entry Date: ${day(15, -1m)}
+      Posting Date: ${day(15, -1m)}
+      Journal Entry Type: SA
+      Company Code: "1010"
+      Transaction Currency: EUR
+      Ledger Group: 0L
+      Header Text: Provision IEE2E-${grp} 0L
+  - press: Enter
+  - fillCell: { within: Line Items, row: 1, column: G/L Account, value: "66019900" }
+  - fillCell: { within: Line Items, row: 1, column: Debit, value: "1000" }
+  - click: { inRow: "66019900", role: button, index: 0 }
+  - fill:
+      Item Text: Provision IEE2E-${grp} 0L
+      Cost Center: BIKEA-${grp}
+  - fillCell: { within: Line Items, row: 2, column: G/L Account, value: "24031100" }
+  - fillCell: { within: Line Items, row: 2, column: Credit, value: "1000" }
+  - click: Post
+  - expectMessage:
+      regex: "posted|\\d{10}"
+      capture: { var: jeProvision0L, regex: "(\\d{10})" }
+  - optional: true
+    click: { text: Display, dialog: true }
+  - optional: true
+    expectText: 0L
+
+  - openApp: { title: Post General Journal Entries }
+  - fill:
+      Journal Entry Date: ${day(15, -1m)}
+      Posting Date: ${day(15, -1m)}
+      Journal Entry Type: SA
+      Company Code: "1010"
+      Transaction Currency: EUR
+      Ledger Group: 2L
+      Header Text: Provision IEE2E-${grp} 2L
+  - press: Enter
+  - fillCell: { within: Line Items, row: 1, column: G/L Account, value: "66019900" }
+  - fillCell: { within: Line Items, row: 1, column: Debit, value: "2000" }
+  - click: { inRow: "66019900", role: button, index: 0 }
+  - fill:
+      Item Text: Provision IEE2E-${grp} 2L
+      Cost Center: BIKEA-${grp}
+  - fillCell: { within: Line Items, row: 2, column: G/L Account, value: "24031100" }
+  - fillCell: { within: Line Items, row: 2, column: Credit, value: "2000" }
+  - click: Post
+  - expectMessage:
+      regex: "posted|\\d{10}"
+      capture: { var: jeProvision2L, regex: "(\\d{10})" }
+
+  # 3. Display line items per ledger
+  - openApp: { title: Display Line Items in General Ledger }
+  - fill:
+      Ledger: 0L
+      Company Code: "1010"
+      G/L Account: "24031100"
+      Fiscal Year: ${year}
+  - select: { label: Status, value: All Items }
+  - addFilter: Profit Center
+  - fill: { Profit Center: "P9${grp}" }
+  - click: Go
+  - expectText: ${jeProvision0L}
+  - fill: { Ledger: 2L }
+  - click: Go
+  - expectText: ${jeProvision2L}

@@ -9,6 +9,7 @@ const { interpolate } = require('./vars');
 const { ensureLoggedIn } = require('./login');
 const { messageRecorderScript, MESSAGE_SELECTORS, settle } = require('./ui5');
 const { writeReports } = require('./report');
+const { State } = require('./state');
 
 const STEP_META = new Set(['name', 'optional', 'timeout']);
 // Steps that inspect the result of the previous action keep its message window.
@@ -24,17 +25,21 @@ const log = {
 
 function listTaskFiles(inputs) {
   const files = [];
+  const walk = (p) => {
+    if (fs.statSync(p).isDirectory()) {
+      for (const f of fs.readdirSync(p).sort()) walk(path.join(p, f));
+    } else if (/\.ya?ml$/i.test(p)) files.push(p);
+  };
   for (const input of inputs) {
     const p = path.resolve(input);
     if (!fs.existsSync(p)) throw new Error(`No such file or directory: ${input}`);
-    if (fs.statSync(p).isDirectory()) {
-      for (const f of fs.readdirSync(p).sort()) if (/\.ya?ml$/i.test(f)) files.push(path.join(p, f));
-    } else files.push(p);
+    walk(p);
   }
   return files;
 }
 
-// A file holds one task, or `tasks: [...]` for several.
+// A file holds one task, or `tasks: [...]` for several. Tasks run in exercise order.
+// Tasks marked `skip: <reason>` only run when --grep names them.
 function loadTasks(inputs, grep) {
   const tasks = [];
   for (const file of listTaskFiles(inputs)) {
@@ -42,9 +47,12 @@ function loadTasks(inputs, grep) {
     const list = Array.isArray(doc?.tasks) ? doc.tasks : [doc];
     list.forEach((t, i) => tasks.push({ id: t.id || `${path.basename(file, path.extname(file))}-${i + 1}`, file, ...t }));
   }
-  if (!grep) return tasks;
+  tasks.sort((a, b) => (a.exercise ?? 1e9) - (b.exercise ?? 1e9));
+  if (!grep) return tasks.filter((t) => !t.skip);
   const re = new RegExp(grep, 'i');
-  return tasks.filter((t) => re.test(t.id) || re.test(t.title || '') || (t.tags || []).some((g) => re.test(g)));
+  return tasks.filter(
+    (t) => re.test(t.id) || re.test(t.title || '') || re.test(String(t.exercise ?? '')) || (t.tags || []).some((g) => re.test(g))
+  );
 }
 
 function stepAction(step) {
@@ -71,22 +79,93 @@ function validate(tasks) {
   return problems;
 }
 
+const BUILTIN_VARS = new Set(['grp', 'user', 'today', 'date', 'day', 'on', 'monthStart', 'monthEnd', 'yearStart', 'yearEnd', 'year', 'month', 'num', 'rand', 'timestamp']);
+
+// Variables a task reads that nothing defines or captures before it (in exercise order).
+// Warnings only: --var or values saved by an earlier run can still supply them.
+function unresolvedVars(tasks, alreadyKnown = []) {
+  const known = new Set(alreadyKnown);
+  const warnings = [];
+  const produced = (step) => {
+    const { action, arg } = stepAction(step);
+    if (action === 'capture' && arg?.var) return [arg.var];
+    if (action === 'expectMessage' && arg?.capture?.var) return [arg.capture.var];
+    if (action === 'set' && arg && typeof arg === 'object') return Object.keys(arg);
+    return [];
+  };
+  for (const t of tasks) {
+    Object.keys(t.vars || {}).forEach((v) => known.add(v));
+    const missing = new Set();
+    for (const step of t.steps || []) {
+      for (const m of JSON.stringify(step).matchAll(/\$\{([\w.]+)/g)) {
+        const name = m[1];
+        if (!BUILTIN_VARS.has(name) && !name.startsWith('env.') && !known.has(name)) missing.add(name);
+      }
+      produced(step).forEach((v) => known.add(v));
+    }
+    if (missing.size) warnings.push(`${t.id}: uses ${[...missing].map((v) => `\${${v}}`).join(', ')} not captured by an earlier task`);
+  }
+  return warnings;
+}
+
 function describe(action, arg) {
   if (arg === true || arg === undefined) return action;
   const text = typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
   return `${action} ${text.length > 90 ? `${text.slice(0, 87)}...` : text}`;
 }
 
-async function runTask(task, page, cfg, sharedVars) {
-  const result = { id: task.id, title: task.title || task.id, file: task.file, status: 'passed', steps: [], startedAt: Date.now() };
-  const vars = Object.assign(sharedVars, task.vars ? interpolate(task.vars, sharedVars, cfg) : {});
-  const ctx = { page, cfg, vars, log, task, outDir: cfg.outDir, since: Date.now() };
+function skippedSteps(task, from) {
+  return task.steps.slice(from).map((s, i) => {
+    const { action, arg } = stepAction(s);
+    return { index: from + i + 1, action, name: s.name || describe(action, arg), status: 'skipped' };
+  });
+}
 
-  log.info(`\n▶ ${task.id}: ${result.title}`);
-  if (task.description) log.info(`  ${String(task.description).trim().split('\n').join('\n  ')}`);
+async function runTask(task, page, cfg, shared) {
+  const result = {
+    id: task.id,
+    exercise: task.exercise,
+    title: task.title || task.id,
+    file: task.file,
+    status: 'passed',
+    steps: [],
+    startedAt: Date.now(),
+  };
+  const { vars, state } = shared;
+  const ctx = {
+    page,
+    cfg,
+    vars,
+    log,
+    state,
+    task,
+    outDir: cfg.outDir,
+    since: Date.now(),
+    saveVars: () => state.saveVars(vars),
+  };
 
-  // Start every task from the launchpad unless it opts out (to continue where the last one ended).
-  if (task.startFromHome !== false) await actions.home({ ...ctx, stepTimeout: cfg.timeout });
+  log.info(`\n▶ ${task.exercise ? `Exercise ${task.exercise} ` : ''}[${task.id}] ${result.title}`);
+
+  const blocked = (task.requires || []).filter((id) => shared.failed.has(id));
+  if (blocked.length) {
+    result.status = 'skipped';
+    result.error = `Prerequisite failed in this run: ${blocked.join(', ')}`;
+    result.steps = skippedSteps(task, 0);
+    log.warn(`  skipped - ${result.error}`);
+    return result;
+  }
+
+  try {
+    Object.assign(vars, task.vars ? interpolate(task.vars, vars, cfg) : {});
+    // Start every task from the launchpad unless it opts out (to continue where the last one ended).
+    if (task.startFromHome !== false) await actions.home({ ...ctx, stepTimeout: cfg.timeout });
+  } catch (err) {
+    result.status = 'failed';
+    result.error = `Setup: ${err.message.split('\n')[0]}`;
+    result.steps = skippedSteps(task, 0);
+    log.fail(`  ✘ ${result.error}`);
+    return result;
+  }
 
   for (let i = 0; i < task.steps.length; i++) {
     const raw = task.steps[i];
@@ -104,56 +183,67 @@ async function runTask(task, page, cfg, sharedVars) {
     } catch (err) {
       step.name = step.name || meta.name || describe(action, rawArg);
       step.error = err.message.split('\n')[0];
-      step.status = meta.optional ? 'warned' : 'failed';
-      const shot = path.join(cfg.outDir, `${task.id}-step${step.index}-failure.png`);
-      await page.screenshot({ path: shot, fullPage: true }).catch(() => {});
-      step.screenshot = shot;
-      (meta.optional ? log.warn : log.fail)(`  ${meta.optional ? '⚠' : '✘'} ${step.index}. ${step.name}\n      ${step.error}`);
+      step.status = err.manual ? 'manual' : meta.optional ? 'warned' : 'failed';
+      if (step.status !== 'manual') {
+        const shot = path.join(cfg.outDir, `${task.id}-step${step.index}-failure.png`);
+        await page.screenshot({ path: shot, fullPage: true }).catch(() => {});
+        step.screenshot = shot;
+      }
+      const mark = { manual: '✋', warned: '⚠', failed: '✘' }[step.status];
+      (step.status === 'failed' ? log.fail : log.warn)(`  ${mark} ${step.index}. ${step.name}\n      ${step.error}`);
+      if (step.status === 'failed' && cfg.pauseOnFail && !cfg.headless) {
+        log.warn('      Paused: inspect the page in the Playwright inspector, then press Resume.');
+        await page.pause();
+      }
     }
     step.duration = Date.now() - step.startedAt;
     result.steps.push(step);
     if (step.status === 'failed') {
       result.status = 'failed';
       result.error = `Step ${step.index} (${step.name}): ${step.error}`;
+      result.steps.push(...skippedSteps(task, i + 1));
       break;
     }
   }
-  // Mark the steps that never ran so the report shows the whole task.
-  for (let i = result.steps.length; i < task.steps.length; i++) {
-    const { action } = stepAction(task.steps[i]);
-    result.steps.push({ index: i + 1, action, name: task.steps[i].name || describe(action, stepAction(task.steps[i]).arg), status: 'skipped' });
-  }
+  if (result.status === 'passed' && result.steps.some((s) => s.status === 'manual')) result.status = 'partial';
   result.duration = Date.now() - result.startedAt;
   return result;
 }
 
 async function runAll(tasks, cfg, cliVars) {
   fs.mkdirSync(cfg.outDir, { recursive: true });
+  const state = new State(cfg);
+  // Saved values from earlier runs, overridden by --var.
+  const shared = { state, vars: { ...state.vars, ...cliVars }, failed: new Set() };
+
   const browser = await chromium.launch({ headless: cfg.headless, slowMo: cfg.slowMo, executablePath: cfg.chromiumPath });
   const context = await browser.newContext({
     storageState: fs.existsSync(cfg.authFile) ? cfg.authFile : undefined,
     viewport: { width: 1600, height: 900 },
     locale: 'en-US',
+    acceptDownloads: true,
   });
   await context.addInitScript(messageRecorderScript, MESSAGE_SELECTORS);
   context.setDefaultTimeout(cfg.timeout);
   if (cfg.trace) await context.tracing.start({ screenshots: true, snapshots: true });
 
   const page = await context.newPage();
-  const run = { startedAt: Date.now(), baseUrl: cfg.baseUrl, user: cfg.user, tasks: [] };
-  const sharedVars = { ...cliVars };
+  const run = { startedAt: Date.now(), baseUrl: cfg.baseUrl, user: cfg.user, group: cfg.group, tasks: [] };
   try {
     await ensureLoggedIn(page, cfg, log);
     await settle(page, cfg.timeout);
     for (const task of tasks) {
       if (cfg.trace) await context.tracing.startChunk({ title: task.id });
-      const res = await runTask(task, page, cfg, sharedVars);
+      const res = await runTask(task, page, cfg, shared);
       if (cfg.trace) {
         res.trace = path.join(cfg.outDir, `${task.id}-trace.zip`);
         await context.tracing.stopChunk({ path: res.trace });
       }
+      if (res.status === 'failed' || res.status === 'skipped') shared.failed.add(task.id);
       run.tasks.push(res);
-      (res.status === 'passed' ? log.pass : log.fail)(`  ${res.status.toUpperCase()} in ${(res.duration / 1000).toFixed(1)}s`);
+      const paint = { passed: log.pass, partial: log.warn, skipped: log.warn }[res.status] || log.fail;
+      paint(`  ${res.status.toUpperCase()}${res.duration ? ` in ${(res.duration / 1000).toFixed(1)}s` : ''}`);
+      state.saveVars(shared.vars);
     }
   } catch (err) {
     run.fatal = err.message;
@@ -164,12 +254,15 @@ async function runAll(tasks, cfg, cliVars) {
     await browser.close();
   }
   run.finishedAt = Date.now();
-  run.vars = sharedVars;
+  run.vars = shared.vars;
   const files = writeReports(run, cfg.outDir);
 
-  const passed = run.tasks.filter((t) => t.status === 'passed').length;
-  log.info(`\n${passed}/${tasks.length} tasks passed. Reports: ${files.join(', ')}`);
-  return run.fatal || passed !== tasks.length ? 1 : 0;
+  const count = (s) => run.tasks.filter((t) => t.status === s).length;
+  log.info(
+    `\n${count('passed')} passed, ${count('partial')} partial (manual steps), ${count('failed')} failed, ` +
+      `${count('skipped')} skipped of ${tasks.length}. Reports: ${files.join(', ')}`
+  );
+  return run.fatal || count('failed') || count('skipped') ? 1 : 0;
 }
 
-module.exports = { loadTasks, validate, runAll };
+module.exports = { loadTasks, validate, unresolvedVars, runAll };
