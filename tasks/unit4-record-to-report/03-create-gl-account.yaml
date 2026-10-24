@@ -2,33 +2,74 @@ id: IEE2E-03
 exercise: 3
 title: "Create GL Account (copy 65100000 to 65100###)"
 tags: [unit4, fi, master-data]
+description: >
+  Copies 65100000 to 65100### for company code 1010. If 65100### already exists (an earlier
+  attempt), it is not copied again: the description is corrected and company code 1010 checked.
 vars:
   glAccount: 65100${grp}
+  glText: Office Supplies ${grp}
 steps:
   - openApp: { title: Manage G/L Account Master Data }
   - fill:
       Chart of Accounts: YCOA
-      G/L Account: "65100000"
+      G/L Account: ${glAccount}
   - name: View = Chart of Accounts View
     optional: true
     select: { label: View, value: Chart of Accounts View }
   - click: Go
-  - selectRow: "65100000"
-  - click: Copy
-  - fill:
+  - name: Does ${glAccount} exist already?
+    detect: { row: "${glAccount}", var: glExists }
+
+  # --- Exists: correct the description, check company code 1010 ---
+  - when: "${glExists}"
+    openRow: "${glAccount}"
+  - when: "${glExists}"
+    click: Edit
+  - when: "${glExists}"
+    fill:
+      Short Text: ${glText}
+      G/L Account Long Text: ${glText}
+  - when: "${glExists}"
+    click: Save
+  - when: "${glExists}"
+    expectText: ${glText}
+  - when: "${glExists}"
+    click: { text: Company Code Data, role: tab }
+  - name: Company code 1010 is assigned
+    when: "${glExists}"
+    expectText: { text: "1010", within: Company Code Data }
+
+  # --- New: copy 65100000 ---
+  - unless: "${glExists}"
+    fill: { G/L Account: "65100000" }
+  - unless: "${glExists}"
+    click: Go
+  - unless: "${glExists}"
+    selectRow: "65100000"
+  - unless: "${glExists}"
+    click: Copy
+  - unless: "${glExists}"
+    fill:
       dialog: true
       fields:
         G/L Account: ${glAccount}
-        Description: Office Supplies ${grp}
-  - selectRow: { contains: "1010", dialog: true }
-  - click: { text: Copy, dialog: true }
+        Description: ${glText}
+  - unless: "${glExists}"
+    selectRow: { contains: "1010", dialog: true }
+  - unless: "${glExists}"
+    click: { text: Copy, dialog: true }
   - name: Confirm "you will be informed when the creation is finished"
+    unless: "${glExists}"
     click: [OK, Ok]
   - name: Give the background job time to finish
+    unless: "${glExists}"
     wait: 15000
-  - click: View Logs
+  - unless: "${glExists}"
+    click: View Logs
   - name: Open the latest log
+    unless: "${glExists}"
     optional: true
     click: { inRow: G/L, role: button }
-  - expectText: { text: created }
-  - screenshot: log
+  - unless: "${glExists}"
+    expectText: { text: created }
+  - screenshot: result

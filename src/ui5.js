@@ -88,6 +88,12 @@ async function appFrame(page) {
   return null;
 }
 
+// A section title as written in a task also matches the title with a row count: "Company Codes (1)".
+function sectionTitle(title) {
+  if (title instanceof RegExp) return title;
+  return new RegExp(`^\\s*${String(title).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s*\\(\\d+\\))?\\s*$`);
+}
+
 // Where to look for an element, most specific first: an open dialog in the
 // app frame, the app frame, an open dialog in the shell, the shell itself.
 // `within` narrows each scope to the innermost section titled with that text.
@@ -105,9 +111,10 @@ async function searchScopes(page, { frame = 'auto', dialogOnly = false, within }
   if (!within) return scopes;
   // Every container holding the title, innermost first, so the lookup widens
   // outward until the target is found (cards, sub-sections, sections...).
+  const title = sectionTitle(within);
   const narrowed = [];
   for (const s of scopes) {
-    const containers = s.locator(SECTION_SELECTORS).filter({ has: s.getByText(within, { exact: true }) });
+    const containers = s.locator(SECTION_SELECTORS).filter({ has: s.getByText(title, { exact: true }) });
     const n = await containers.count().catch(() => 0);
     for (let i = n - 1; i >= Math.max(0, n - 6); i--) narrowed.push(containers.nth(i));
   }
@@ -117,7 +124,7 @@ async function searchScopes(page, { frame = 'auto', dialogOnly = false, within }
 // The page section titled `title` (for reading its content as a whole).
 async function sectionLocator(page, title) {
   for (const s of await searchScopes(page)) {
-    const sec = s.locator(PAGE_SECTION_SELECTORS).filter({ has: s.getByText(title, { exact: true }) }).last();
+    const sec = s.locator(PAGE_SECTION_SELECTORS).filter({ has: s.getByText(sectionTitle(title), { exact: true }) }).last();
     if ((await sec.count().catch(() => 0)) > 0) return sec;
   }
   throw new Error(`Section "${title}" not found`);

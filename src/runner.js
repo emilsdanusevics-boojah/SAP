@@ -11,7 +11,7 @@ const { messageRecorderScript, MESSAGE_SELECTORS, settle } = require('./ui5');
 const { writeReports } = require('./report');
 const { State } = require('./state');
 
-const STEP_META = new Set(['name', 'optional', 'timeout']);
+const STEP_META = new Set(['name', 'optional', 'timeout', 'when', 'unless']);
 // Steps that inspect the result of the previous action keep its message window.
 const INSPECTING = new Set(['expectMessage', 'expectText', 'expectField', 'expectNoError', 'capture', 'screenshot', 'log', 'set']);
 
@@ -91,6 +91,7 @@ function unresolvedVars(tasks, alreadyKnown = []) {
     if (action === 'capture' && arg?.var) return [arg.var];
     if (action === 'expectMessage' && arg?.capture?.var) return [arg.capture.var];
     if (action === 'set' && arg && typeof arg === 'object') return Object.keys(arg);
+    if (action === 'detect' && arg?.var) return [arg.var];
     return [];
   };
   for (const t of tasks) {
@@ -119,6 +120,14 @@ function skippedSteps(task, from) {
     const { action, arg } = stepAction(s);
     return { index: from + i + 1, action, name: s.name || describe(action, arg), status: 'skipped' };
   });
+}
+
+const truthy = (v) => !['', '0', 'false', 'no'].includes(String(v ?? '').trim().toLowerCase());
+
+function conditionSkip(meta, vars, cfg) {
+  if ('when' in meta && !truthy(interpolate(meta.when, vars, cfg))) return `when ${meta.when} not met`;
+  if ('unless' in meta && truthy(interpolate(meta.unless, vars, cfg))) return `unless ${meta.unless} met`;
+  return null;
 }
 
 async function runTask(task, page, cfg, shared) {
@@ -172,6 +181,14 @@ async function runTask(task, page, cfg, shared) {
     const { action, arg: rawArg } = stepAction(raw);
     const meta = typeof raw === 'object' ? raw : {};
     const step = { index: i + 1, action, status: 'passed', startedAt: Date.now() };
+    // when: "${x}" runs the step only if x is set; unless: "${x}" only if it is not.
+    const skipReason = conditionSkip(meta, vars, cfg);
+    if (skipReason) {
+      Object.assign(step, { name: meta.name || describe(action, rawArg), status: 'skipped', error: skipReason, duration: 0 });
+      result.steps.push(step);
+      log.info(`  – ${step.index}. ${step.name} (skipped: ${skipReason})`);
+      continue;
+    }
     try {
       const arg = interpolate(rawArg, vars, cfg);
       step.name = meta.name || describe(action, arg);

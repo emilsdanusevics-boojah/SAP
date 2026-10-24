@@ -2,20 +2,71 @@ id: IEE2E-07
 exercise: 7
 title: "Create a Business Partner FI (supplier IEE2E-###)"
 tags: [unit4, fi-ap, master-data]
+description: >
+  Creates supplier IEE2E-### (role FLVN00, company code 1010, bank account). If it already exists
+  (an earlier attempt), it is completed instead: Name 1 corrected, company code 1010 and the bank
+  account added if missing. A draft left by an earlier attempt is discarded first.
 vars:
   bp: IEE2E-${grp}
+  bpName: Bicycle Supplies ${grp}
+  bankExists: ""
 steps:
   - openApp: { title: Manage Business Partner Master Data }
-  - click: Create
-  - click: { text: Organization, role: menuitem }
-  - fill:
+
+  # --- Discard a draft left by an earlier attempt ---
+  - select: { label: Editing Status, value: Own Draft }
+  - fill: { label: Search, value: "${bp}", enter: true }
+  - name: Draft of ${bp} left over?
+    detect: { row: "${bp}", var: bpDraft }
+  - when: "${bpDraft}"
+    openRow: "${bp}"
+  - when: "${bpDraft}"
+    click: Discard Draft
+  - name: Confirm the discard (new-object drafts only)
+    when: "${bpDraft}"
+    optional: true
+    timeout: 4000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${bpDraft}"
+    home: true
+  - when: "${bpDraft}"
+    openApp: { title: Manage Business Partner Master Data }
+
+  - select: { label: Editing Status, value: All }
+  - fill: { label: Search, value: "${bp}", enter: true }
+  - name: Does ${bp} exist already?
+    detect: { row: "(${bp})", var: bpExists }
+
+  # --- Exists: check the bank account (readable in display mode only), then edit ---
+  - when: "${bpExists}"
+    openRow: "(${bp})"
+  - when: "${bpExists}"
+    click: { text: Bank Accounts, role: tab }
+  - name: Bank account 50070024 there already?
+    when: "${bpExists}"
+    detect: { row: "50070024", var: bankExists, within: Bank Accounts, timeout: 10000 }
+  - when: "${bpExists}"
+    click: Edit
+
+  # --- New: create organization ${bp} with role FLVN00 ---
+  - unless: "${bpExists}"
+    click: Create
+  - unless: "${bpExists}"
+    click: { text: Organization, role: menuitem }
+  - unless: "${bpExists}"
+    fill:
       Business Partner: ${bp}
-  - select: { label: Grouping, value: BPAB }
-  - fill:
-      BP Role: FLVN00
-      Name 1: Bicycle Supplies ${grp}
-  - click: { text: Address, role: tab }
-  - fill:
+  - unless: "${bpExists}"
+    select: { label: Grouping, value: BPAB }
+  - unless: "${bpExists}"
+    click: { text: Create, within: Roles }
+  - name: Role FLVN00 (Supplier Fin.Accounting)
+    unless: "${bpExists}"
+    fillCell: { within: Roles, row: 1, column: Business Partner Role, value: FLVN00 }
+  - unless: "${bpExists}"
+    click: { text: Address, role: tab }
+  - unless: "${bpExists}"
+    fill:
       Street: Sample Street
       House Number: ${grp}
       City: Walldorf
@@ -23,32 +74,66 @@ steps:
       Country/Region: DE
       Region: BW
       Language: EN
+
+  - click: { text: Basic Data, role: tab }
+  - fill:
+      Name 1: ${bpName}
+
+  # --- Company code 1010 in role FLVN00 ---
+  - click: { text: Roles, role: tab }
   - name: Open the details of role FLVN00 (>)
     openRow: FLVN00
   - click: { text: Company Codes, role: tab }
-  - click: { text: Create, within: Company Codes }
-  - fill:
+  - name: Company code 1010 assigned already?
+    detect: { row: DE Company, var: ccExists, within: Company Codes }
+  - unless: "${ccExists}"
+    click: { text: Create, within: Company Codes }
+  - unless: "${ccExists}"
+    fill:
       Company Code: "1010"
       Reconciliation Account: "21100000"
       Payment Terms: "0001"
       Payment Methods: T
-  - click: Apply
-  - click: Apply
+  - unless: "${ccExists}"
+    click: Apply
+  - name: Back from the role to the business partner
+    click: Apply
+
+  # --- Bank account ---
   - click: { text: Bank Accounts, role: tab }
-  - click: { text: Create, within: Bank Accounts }
-  - fill:
-      ID: "01"
-      Bank Country/Region: DE
-      Bank Key: "50070024"
-      Bank Account: 8888${grp}
-  - name: Open the bank account details (>)
-    openRow: "50070024"
-  - click: Propose IBAN
-  - name: Confirm the proposed IBAN
+  - unless: "${bankExists}"
+    click: { text: Create, within: Bank Accounts }
+  - unless: "${bankExists}"
+    fillCell: { within: Bank Accounts, row: 1, column: ID, value: "01" }
+  - unless: "${bankExists}"
+    fillCell: { within: Bank Accounts, row: 1, column: Bank Country/Region, value: DE }
+  - unless: "${bankExists}"
+    fillCell: { within: Bank Accounts, row: 1, column: Bank Key, value: "50070024" }
+  - unless: "${bankExists}"
+    fillCell: { within: Bank Accounts, row: 1, column: Account Number, value: "8888${grp}" }
+  - name: Open the new bank account's details (>)
+    unless: "${bankExists}"
+    openRow: { row: 1, within: Bank Accounts }
+  - name: Propose IBAN
+    unless: "${bankExists}"
     optional: true
+    timeout: 5000
+    click: Propose IBAN
+  - name: Confirm the proposed IBAN
+    unless: "${bankExists}"
+    optional: true
+    timeout: 4000
     click: { text: [OK, Ok, Confirm], dialog: true }
-  - click: Apply
-  - click: Apply
-  - click: Create
+  - unless: "${bankExists}"
+    click: Apply
+
+  - when: "${bpExists}"
+    click: Save
+  - unless: "${bpExists}"
+    click: Create
+  - name: Saved (display mode)
+    expectText: { text: Edit, exact: true }
   - expectText: ${bp}
-  - expectText: Bicycle Supplies ${grp}
+  - expectText: ${bpName}
+  - name: Name 1 no longer holds field labels
+    expectText: { text: "FLVN00, Name 1", not: true }

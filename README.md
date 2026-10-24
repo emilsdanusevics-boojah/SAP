@@ -71,9 +71,9 @@ in exercises 29 and 30. To support this:
 - You can supply any value by hand, for example `--var poNo=4500001234`.
 - `--reset-state` forgets all saved values, for a fresh pass with a new group number.
 
-Note that re-running an exercise that creates master data (business partner, cost
-center, G/L account, material) will fail, because the object already exists. That
-is expected.
+Exercises 3 (G/L account) and 7 (business partner) check whether their object exists
+already and complete it instead of creating it again. Re-running any other exercise that
+creates master data (cost center, material ...) still fails, because the object exists.
 
 ### Manual steps
 
@@ -152,7 +152,7 @@ Inside `{ ... }`, quote any value that contains `${...}`.
 | `check` / `uncheck` | Sets a checkbox by label |
 | `click` | Clicks a button, link, tab or menu item: text, or `[A, B]` alternatives. Options: `within`, `dialog`, `inRow`, `role`, `index` (-1 is the last match) |
 | `selectRow` | Ticks the table row(s) containing a text (`contains`, `within`, `dialog`) |
-| `openRow` | Navigates into the row containing a text (">" or a click on the row) |
+| `openRow` | Navigates into the row containing a text (">" or a click on the row); `{ row: n, within }` picks a row by number |
 | `fillCell` | Fills a table cell by column header. Pick the row with `row` (1-based; -1 is the last), `rowContains`, or `firstEmpty` |
 | `clickCell` | Clicks the link or button in a table cell |
 | `addFilter` | Adapt Filters: finds the filter, ticks it, OK |
@@ -164,6 +164,7 @@ Inside `{ ... }`, quote any value that contains `${...}`.
 | `expectMessage` | A success/status message must appear; can `capture` a number from it |
 | `expectNoError` | Fails if an error message is shown |
 | `capture` | Saves a variable `from:` a message, field, cell, text or URL |
+| `detect` | Sets `var` to `yes` if a `text` or table `row` shows up (default 5 s), else empty. Never fails |
 | `set` | Sets variables directly |
 | `assignBusinessRoles` | The Maintain Business Users flow: `{ add: [...], removeOthers }` |
 | `manual` | A step done by a human (see [Manual steps](#manual-steps)) |
@@ -173,6 +174,9 @@ Any step can also carry:
 - `name`: the label shown in the report.
 - `optional: true`: a failure becomes a warning and the task continues.
 - `timeout`: in milliseconds.
+- `when: "${x}"` / `unless: "${x}"`: run the step only if `x` is set (not empty, `0`, `false`
+  or `no`) / not set. With `detect`, this lets one task handle both "create it" and "it
+  exists already from an earlier attempt" (see exercises 3 and 7).
 
 ### Variables
 

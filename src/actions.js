@@ -171,7 +171,21 @@ async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within,
 }
 
 async function findRow(ctx, a) {
+  // { row: 1, within } picks the n-th data row (e.g. a new row whose values sit in inputs).
+  if (a.row !== undefined && a.contains === undefined) {
+    const dataRows = (s) => s.getByRole('row').filter({ hasNot: s.getByRole('columnheader') });
+    return locate(ctx.page, [dataRows], { timeout: ctx.stepTimeout, what: `table row ${a.row}`, ...scopeOf(a), index: Number(a.row) - 1 });
+  }
   return locate(ctx.page, rowBuilders(a.contains), { timeout: ctx.stepTimeout, what: `table row containing "${a.contains}"`, ...scopeOf(a) });
+}
+
+// A grid-table cell that a row references through aria-owns (selector, row action).
+async function ownedCell(row, re) {
+  const ids = ((await row.getAttribute('aria-owns').catch(() => null)) || '').split(/\s+/);
+  const id = ids.find((i) => re.test(i));
+  if (!id) return null;
+  const cell = row.locator(`xpath=ancestor::*[contains(concat(" ", @class, " "), " sapUiTable ")][1]`).locator(`[id="${id}"]`).first();
+  return (await cell.count()) > 0 ? cell : null;
 }
 
 // Tick a row's selection checkbox / radio button (or click the row if it has none).
@@ -184,7 +198,9 @@ async function tickRow(row) {
     if (checked !== 'true') await selector.click();
     return;
   }
-  // Grid table: the selector cell lives in a separate fixed row with the same index.
+  // Grid table: the row owns its selector cell by id (aria-owns "...-rowsel0") without containing it.
+  const owned = await ownedCell(row, /-rowsel\d+$/);
+  if (owned) return owned.click();
   const idx = await row.getAttribute('data-sap-ui-rowindex').catch(() => null);
   if (idx !== null) {
     const cell = row.page().locator(`.sapUiTableRowSelectionCell[data-sap-ui-rowindex="${idx}"]`).first();
@@ -317,11 +333,15 @@ const actions = {
     await settle(ctx.page, ctx.stepTimeout);
   },
 
-  // openRow: "IEE2E-035"  |  { contains, within }  -> navigate into the row (">" or row click)
+  // openRow: "IEE2E-035"  |  { contains, within }  |  { row: 1, within }  -> navigate into the row (">" or row click)
   async openRow(ctx, arg) {
     const a = asObj(arg, 'contains');
     const row = await findRow(ctx, a);
-    const nav = row.locator('.sapMLIBImgNav, .sapUiTableRowActionIcon, [aria-label*="Navigat"], [title*="Navigat"]').first();
+    let nav = row.locator('.sapMLIBImgNav, .sapUiTableRowActionIcon, [aria-label*="navigat" i], [title*="navigat" i]').first();
+    if ((await nav.count()) === 0) {
+      const act = await ownedCell(row, /-rowact\d+$/);
+      if (act) nav = act.locator('.sapUiTableRowActionIcon, [role="button"], .sapUiIcon').first();
+    }
     if ((await nav.count()) > 0) await nav.click();
     else await row.locator('[role="gridcell"], td').filter({ hasText: a.contains }).first().click().catch(() => row.click());
     await settle(ctx.page, ctx.stepTimeout);
@@ -433,6 +453,17 @@ const actions = {
       return;
     }
     await locate(ctx.page, builders, { timeout: ctx.stepTimeout, what: `text "${a.text}"`, ...scopeOf(a) });
+  },
+
+  // detect: { text: "65100650", var: glExists }  |  { row: "IEE2E-650", var, within, dialog, timeout }
+  // Sets var to "yes" when the text / table row shows up within timeout (default 5 s), else "". Never fails;
+  // combine with `when: "${glExists}"` / `unless: "${glExists}"` on later steps.
+  async detect(ctx, a) {
+    const builders = a.row !== undefined ? rowBuilders(a.row) : alternatives(a.text).map((t) => (s) => s.getByText(t, { exact: !!a.exact }));
+    const found = await locate(ctx.page, builders, { timeout: Number(a.timeout || 5000), what: a.row ?? a.text, ...scopeOf(a) }).catch(() => null);
+    ctx.vars[a.var] = found ? 'yes' : '';
+    ctx.saveVars();
+    ctx.log.info(`  ${a.var} = ${found ? 'yes' : 'no'}`);
   },
 
   // expectField: { label: "Net Value", value: "100.00" } | { label, contains } | { label, notEmpty: true }
