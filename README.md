@@ -78,7 +78,6 @@ creates master data (cost center, material ...) still fails, because the object 
 ### Manual steps
 
 Some steps can't sensibly be automated. These are marked `manual:` in the task files:
-- Exercise 18: preparing the Excel template.
 - Joule prompts.
 - Drag-and-drop in analytical reports.
 - Reading T-account views.
@@ -98,7 +97,10 @@ step. Do the step in the browser, then press Enter in the terminal to continue.
   The postings are the same.
 - **Exercise 16** stays in display mode. It doesn't open Edit just to view the
   value help.
-- **Exercise 18** needs the adapted course file. Set `F2121_FILE` in `.env` to its path.
+- **Exercise 18** uploads `uploads/F2121_###_PlanCostRate.xlsx`: the app's own template
+  (Manage Cost Rates - Plan > Upload > Download Template) with two rows from row 7, cost center
+  10101753 / activity type IT### / 2026, periods 001-012 / fixed rate 100 USD per 1 hour, one row
+  for ledger 0L and one for 2L. `uploads/` is not committed.
 - **Exercise 31**: the payment run ID `IE###` must be unique for each run date.
 - **Exercise 33** switches F1-### to make-to-stock. The guide warns not to do this while
   a parallel Controlling training is using the system.
