@@ -1,0 +1,9 @@
+id: SD-02
+title: Display the sales order created in SD-01
+tags: [sales, display]
+description: Uses ${salesOrder} captured by SD-01 (run them together, or pass --var salesOrder=...).
+steps:
+  - openApp: SalesOrder-display          # "Display Sales Orders" (VA03)
+  - fill: { label: Order, value: "${salesOrder}", enter: true }
+  - expectField: { label: Sold-To Party, value: "17100001" }
+  - expectText: TG11

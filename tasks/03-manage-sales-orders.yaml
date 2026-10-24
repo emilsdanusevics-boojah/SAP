@@ -1,0 +1,11 @@
+id: SD-03
+title: Find the order in "Manage Sales Orders"
+tags: [sales, fiori-elements]
+steps:
+  - openApp: SalesOrder-manage
+  - fill: { label: Sales Order, value: "${salesOrder}" }
+  - click: Go
+  - expectText: ${salesOrder}
+  - click: ${salesOrder}                  # open the object page
+  - expectText: { text: "Standard Order" }
+  - screenshot: object-page

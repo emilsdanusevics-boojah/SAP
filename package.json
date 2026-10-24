@@ -1,0 +1,17 @@
+{
+  "name": "sap-fiori-task-tester",
+  "version": "1.0.0",
+  "description": "Walks through SAP S/4HANA Cloud (Fiori) learning tasks described in YAML and reports pass/fail per step.",
+  "main": "run.js",
+  "scripts": {
+    "test:tasks": "node run.js tasks",
+    "test:headed": "node run.js tasks --headed --slowmo 250",
+    "validate": "node run.js tasks --validate",
+    "selftest": "node test/selftest.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "playwright": "^1.51.0",
+    "yaml": "^2.9.1"
+  }
+}

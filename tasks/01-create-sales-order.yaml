@@ -1,0 +1,36 @@
+# Example learning task. Field labels/values follow the SAP Best Practices demo
+# data (company 1710, customer 17100001, material TG11). Change them to match
+# the exercise sheet you are testing.
+id: SD-01
+title: Create a standard sales order
+tags: [sales, create]
+description: |
+  Open "Create Sales Orders", enter organizational data, add one item,
+  save, and capture the new sales order number for the next tasks.
+vars:
+  soldTo: "17100001"
+  material: TG11
+  qty: 5
+steps:
+  - openApp: SalesOrder-create          # same as tile "Create Sales Orders" (VA01)
+  - fill:
+      Order Type: OR
+      Sales Organization: "1710"
+      Distribution Channel: "10"
+      Division: "00"
+  - press: Enter
+  - name: Enter sold-to party and customer reference
+    fill:
+      Sold-To Party: ${soldTo}
+      Cust. Reference: PO-${rand}
+  - fillCell: { row: 1, column: Material, value: "${material}" }
+  - fillCell: { row: 1, column: Order Quantity, value: "${qty}", enter: true }
+  - click: Save
+  - name: Confirm the incompletion popup if the system shows one
+    optional: true
+    timeout: 4000
+    click: { text: Save, dialog: true }
+  - expectMessage:
+      regex: "Standard Order \\d+ has been saved"
+      capture: { var: salesOrder, regex: "Standard Order (\\d+)" }
+  - screenshot: saved
