@@ -79,7 +79,7 @@ function validate(tasks) {
   return problems;
 }
 
-const BUILTIN_VARS = new Set(['grp', 'user', 'today', 'date', 'day', 'on', 'monthStart', 'monthEnd', 'yearStart', 'yearEnd', 'year', 'month', 'num', 'rand', 'timestamp']);
+const BUILTIN_VARS = new Set(['grp', 'user', 'userId', 'today', 'date', 'day', 'on', 'monthStart', 'monthEnd', 'yearStart', 'yearEnd', 'year', 'month', 'num', 'rand', 'timestamp']);
 
 // Variables a task reads that nothing defines or captures before it (in exercise order).
 // Warnings only: --var or values saved by an earlier run can still supply them.
@@ -98,7 +98,9 @@ function unresolvedVars(tasks, alreadyKnown = []) {
     Object.keys(t.vars || {}).forEach((v) => known.add(v));
     const missing = new Set();
     for (const step of t.steps || []) {
-      for (const m of JSON.stringify(step).matchAll(/\$\{([\w.]+)/g)) {
+      // A variable in when/unless may legitimately be unset (it counts as empty).
+      const { when, unless, ...checked } = typeof step === 'object' ? step : {};
+      for (const m of JSON.stringify(typeof step === 'object' ? checked : step).matchAll(/\$\{([\w.]+)/g)) {
         const name = m[1];
         if (!BUILTIN_VARS.has(name) && !name.startsWith('env.') && !known.has(name)) missing.add(name);
       }
@@ -259,6 +261,11 @@ async function runAll(tasks, cfg, cliVars) {
   try {
     await ensureLoggedIn(page, cfg, log);
     await settle(page, cfg.timeout);
+    // ${userId}: the technical user ID (e.g. CB9980011258) that "Created By" filters expect.
+    if (!shared.vars.userId) {
+      const id = await page.evaluate(() => window.sap?.ushell?.Container?.getUser?.()?.getId?.()).catch(() => null);
+      if (id) shared.vars.userId = id;
+    }
     for (const task of tasks) {
       if (cfg.trace) await context.tracing.startChunk({ title: task.id });
       const res = await runTask(task, page, cfg, shared);

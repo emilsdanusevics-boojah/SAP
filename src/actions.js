@@ -542,6 +542,7 @@ const actions = {
       throw new Error(`Message contains "${a.notContains}": ${res.text}`);
     }
     applyCapture(ctx, res.text, a.capture);
+    return { message: res.text };
   },
 
   // expectNoError: true  -> fails if an error message box/strip/status bar is visible

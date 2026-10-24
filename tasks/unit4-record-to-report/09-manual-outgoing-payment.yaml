@@ -3,62 +3,95 @@ exercise: 9
 title: "Post a Manual Outgoing Payment"
 tags: [unit4, fi-ap, payment]
 requires: [IEE2E-07]
+description: >
+  Invoice 02-### (1,100 EUR) and its single payment. Neither is posted again when apInvoice2 /
+  singlePaymentRun were captured by an earlier run.
 steps:
   # 1. Vendor invoice
-  - openApp: { title: Create Supplier Invoice }
-  - name: Start fresh if a draft from an earlier attempt is offered
+  - unless: "${apInvoice2}"
+    openApp: { title: Create Supplier Invoice }
+  - unless: "${apInvoice2}"
+    name: Start fresh if a draft from an earlier attempt is offered
     optional: true
     timeout: 8000
     click: { text: "No", dialog: true, role: button }
-  - select: { label: Transaction, value: Invoice }
-  - fill: { Company Code: "1010" }
-  - name: Confirm "Data Will Be Lost" (left over from an earlier draft)
+  - unless: "${apInvoice2}"
+    select: { label: Transaction, value: Invoice }
+  - unless: "${apInvoice2}"
+    fill: { Company Code: "1010" }
+  - unless: "${apInvoice2}"
+    name: Confirm "Data Will Be Lost" (left over from an earlier draft)
     optional: true
     timeout: 4000
     click: { text: OK, dialog: true, role: button }
-  - fill:
+  - unless: "${apInvoice2}"
+    fill:
       Invoice Date: ${today}
       Posting Date: ${today}
-  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
-  - fill:
+  - unless: "${apInvoice2}"
+    select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - unless: "${apInvoice2}"
+    fill:
       Gross Invoice Amount: "1100"
       Currency: EUR
       Reference: Invoice 02-${grp}
-  - click: { text: G/L Account Items, role: tab }
-  - click: { text: Add, within: G/L Account Items }
-  - fillCell: { within: G/L Account Items, row: 1, column: G/L Account, value: "65100${grp}" }
-  - fillCell: { within: G/L Account Items, row: 1, column: Amount, value: "1000" }
-  - fillCell: { within: G/L Account Items, row: 1, column: Tax Code, value: 1I }
-  - fillCell: { within: G/L Account Items, row: 1, column: Cost Center, value: "BIKEA-${grp}" }
-  - click: Post
-  - expectMessage:
+  - unless: "${apInvoice2}"
+    click: { text: G/L Account Items, role: tab }
+  - unless: "${apInvoice2}"
+    click: { text: Add, within: G/L Account Items }
+  - unless: "${apInvoice2}"
+    fillCell: { within: G/L Account Items, row: 1, column: G/L Account, value: "65100${grp}" }
+  - unless: "${apInvoice2}"
+    fillCell: { within: G/L Account Items, row: 1, column: Amount, value: "1000" }
+  - unless: "${apInvoice2}"
+    fillCell: { within: G/L Account Items, row: 1, column: Tax Code, value: 1I }
+  - unless: "${apInvoice2}"
+    fillCell: { within: G/L Account Items, row: 1, column: Cost Center, value: "BIKEA-${grp}" }
+  - unless: "${apInvoice2}"
+    click: Post
+  - unless: "${apInvoice2}"
+    expectMessage:
       regex: "created|posted"
       capture: { var: apInvoice2, regex: "(\\d{9,10})" }
-  - click: { text: "No", dialog: true }
+  - name: Do not enter another invoice
+    optional: true
+    timeout: 8000
+    click: { text: "No", dialog: true }
 
   # 2. Single payment
-  - openApp: { title: Manage Supplier Line Items }
-  - fill:
+  - unless: "${singlePaymentRun}"
+    openApp: { title: Manage Supplier Line Items }
+  - unless: "${singlePaymentRun}"
+    fill:
       Supplier: IEE2E-${grp}
       Company Code: "1010"
-  - select: { label: Status, value: Open Items }
-  - click: Go
-  - selectRow: Invoice 02-${grp}
-  - click: Create Single Payment
-  - click: { text: Create, dialog: true }
-  - name: Accept the payment proposal
+  - unless: "${singlePaymentRun}"
+    select: { label: Status, value: Open Items }
+  - unless: "${singlePaymentRun}"
+    click: Go
+  - unless: "${singlePaymentRun}"
+    name: Select invoice 02 (the 1,100.00 item; the list does not show the reference)
+    selectRow: "${num(100.00)}"
+  - unless: "${singlePaymentRun}"
+    click: Create Single Payment
+  - unless: "${singlePaymentRun}"
+    click: { text: Create, role: button }
+  - unless: "${singlePaymentRun}"
+    name: Accept the payment proposal
     optional: true
     click: Accept
-  - expectMessage:
+  - unless: "${singlePaymentRun}"
+    expectMessage:
       regex: "payment run"
-      capture: { var: singlePaymentRun, regex: "[Pp]ayment run\\s+(\\S+)" }
+      capture: { var: singlePaymentRun, regex: "\\b([A-Z]\\d{4})\\b" }
   - optional: true
+    timeout: 5000
     click: Back to Supplier Line Items Application
 
   # 3. Check automatic payments
   - openApp: { title: Manage Automatic Payments }
   - fill:
-      Created By: ${user}
+      Created By: ${userId}
       Company Code: "1010"
   - click: Go
   - click: { text: Payments Processed, role: tab }

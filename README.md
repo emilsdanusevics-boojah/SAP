@@ -183,6 +183,7 @@ Any step can also carry:
 | Variable | Meaning |
 |---|---|
 | `${grp}`, `${user}` | Your course number and your logon user |
+| `${userId}` | Your technical user ID (e.g. `CB9980011258`), read from the launchpad after login |
 | `${today}`, `${date(+10d)}`, `${date(+3m)}` | Today, or offset by days (d), months (m) or years (y) |
 | `${monthStart}`, `${monthStart(-1m)}`, `${monthEnd}` | First or last day of a month |
 | `${yearStart}`, `${yearEnd(+1y)}` | First or last day of a year |
