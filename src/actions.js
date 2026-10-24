@@ -168,9 +168,8 @@ async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within,
       if (col < 0) continue;
       const ariaCol = await headers.nth(col).getAttribute('aria-colindex');
       const rows = scope
-        .locator('[role="row"], tbody tr')
-        .filter({ visible: true })
-        .filter({ hasNot: scope.locator('[role="columnheader"], th') });
+        .locator(':is([role="row"], tbody tr):not(:has([role="columnheader"], th))')
+        .filter({ visible: true });
       const cellOf = (r) => (ariaCol ? r.locator(`[aria-colindex="${ariaCol}"]`).first() : r.locator('[role="gridcell"], td').nth(col));
       if (firstEmpty) {
         const n = await rows.count();
@@ -213,8 +212,19 @@ async function labelledItemField(scope, { row = 1, rowContains, column }) {
 async function findRow(ctx, a) {
   // { row: 1, within } picks the n-th data row (e.g. a new row whose values sit in inputs).
   if (a.row !== undefined && a.contains === undefined) {
-    const dataRows = (s) => s.getByRole('row').filter({ hasNot: s.getByRole('columnheader') });
-    return locate(ctx.page, [dataRows], { timeout: ctx.stepTimeout, what: `table row ${a.row}`, ...scopeOf(a), index: Number(a.row) - 1 });
+    // A self-contained selector: an inner locator built from a `within` scope would never match.
+    const dataRows = (s) => s.locator('[role="row"]:not(:has([role="columnheader"], th))');
+    const n = Number(a.row);
+    const deadline = Date.now() + ctx.stepTimeout;
+    for (;;) {
+      for (const scope of await searchScopes(ctx.page, scopeOf(a))) {
+        const rows = dataRows(scope).filter({ visible: true });
+        const r = await nthDataRow(rows, n);
+        if ((await r.count().catch(() => 0)) > 0) return r;
+      }
+      if (Date.now() > deadline) throw new Error(`Could not find table row ${a.row}${a.within ? ` in "${a.within}"` : ''}`);
+      await ctx.page.waitForTimeout(300);
+    }
   }
   return locate(ctx.page, rowBuilders(a.contains), { timeout: ctx.stepTimeout, what: `table row containing "${a.contains}"`, ...scopeOf(a) });
 }
@@ -416,7 +426,27 @@ const actions = {
       );
       await search.fill(name);
       await settle(ctx.page, ctx.stepTimeout);
-      await tickRow(await findRow(ctx, { contains: name, dialog: true }));
+      const row = await locate(ctx.page, rowBuilders(name), { timeout: 5000, what: name, dialogOnly: true }).catch(() => null);
+      if (row) {
+        await tickRow(row);
+        continue;
+      }
+      // Newer dialog: the list holds only visible filters; others come from "Add Filter: Select or Type Name".
+      await search.fill('');
+      const add = await locate(
+        ctx.page,
+        [...fieldBuilders(['Add Filter']), (s) => s.getByPlaceholder(/select or type name/i)],
+        { timeout: ctx.stepTimeout, what: `filter "${name}"`, dialogOnly: true }
+      );
+      const box = (await add.evaluate((e) => e.tagName === 'INPUT').catch(() => false)) ? add : add.locator('input').first();
+      await box.fill(name);
+      const option = await locate(
+        ctx.page,
+        [(s) => s.getByRole('option', { name, exact: true }), (s) => s.getByRole('option', { name })],
+        { timeout: ctx.stepTimeout, what: `filter option "${name}"` }
+      );
+      await option.click();
+      await settle(ctx.page, ctx.stepTimeout);
     }
     await actions.click(ctx, { text: ['OK', 'Ok', 'Apply'], dialog: true, role: 'button' });
   },
@@ -646,7 +676,7 @@ const actions = {
 
     if (a.removeOthers) {
       const keep = [PROTECTED_ROLE, ...add, ...[].concat(a.keep || [])];
-      const rows = area.getByRole('row').filter({ hasNot: area.getByRole('columnheader') });
+      const rows = area.locator('[role="row"]:not(:has([role="columnheader"], th))');
       // Rows must show role IDs to match `keep`; a table listing only names could lose the generic role.
       if (!/\b(BR|Z|SAP_BR)_[A-Z0-9_]+/.test(areaText.replace(PROTECTED_ROLE, ''))) {
         ctx.log.warn('  roles are listed by name only - skipped removing other roles');
