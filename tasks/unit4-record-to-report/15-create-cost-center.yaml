@@ -2,47 +2,120 @@ id: IEE2E-15
 exercise: 15
 title: "Create Cost Center (MAR-### and MAN-###)"
 tags: [unit4, co, master-data]
+description: >
+  Creates cost centers MAR-### (marketing) and MAN-### (production) under hierarchy node IEE2E.
+  A cost center that exists already is not created again; own drafts left by an earlier attempt
+  are discarded first. The create form opens next to the list, whose filter bar has fields with
+  the same labels, so the fields are filled per form section.
 steps:
   - openApp: { title: Manage Cost Centers }
-  - click: Create
-  - optional: true
-    click: Full Screen
-  - fill:
-      Cost Center: MAR-${grp}
-      Name: Marketing IEE2E ${grp}
-      Description: Marketing IEE2E ${grp}
-      Valid From: ${yearStart}
-      Valid To: 31.12.2099
-      Person Responsible: ${user}
-      Cost Center Category: "9"
-      Standard Hierarchy Node: IEE2E
-      Company Code: "1010"
-      Profit Center: P9${grp}
-  - click: Create
-  - expectNoError: true
-  - click: Back
 
-  - click: Create
-  - optional: true
-    click: Full Screen
-  - fill:
-      Cost Center: MAN-${grp}
-      Name: Manuf. IEE2E ${grp}
-      Description: Manufacturing IEE2E ${grp}
-      Valid From: ${yearStart}
-      Valid To: 31.12.2099
-      Person Responsible: ${user}
-      Cost Center Category: F
-      Standard Hierarchy Node: IEE2E
-      Company Code: "1010"
-      Profit Center: P9${grp}
-  - click: Create
-  - expectNoError: true
-  - click: Back
+  # Discard drafts left by an earlier attempt
+  - select: { label: Editing Status, value: Own Draft }
+  - click: Go
+  - detect: { row: Draft, var: ccDraft }
+  - when: "${ccDraft}"
+    openRow: Draft
+  - when: "${ccDraft}"
+    click: Discard Draft
+  - name: Confirm the discard
+    when: "${ccDraft}"
+    optional: true
+    timeout: 5000
+    click: { text: Discard, role: button, index: -1 }
+  - select: { label: Editing Status, value: All }
+
+  # MAR-###
+  - name: Search MAR-${grp} (the Cost Center filter only accepts existing ones)
+    fill: { label: Search, value: "MAR-${grp}", enter: true }
+  - click: Go
+  - name: MAR-${grp} there already?
+    detect: { row: "MAR-${grp}", var: marExists }
+  - fill: { label: Search, value: "", enter: true }
+  - unless: "${marExists}"
+    click: { text: Create, role: button }
+  - unless: "${marExists}"
+    click: { text: Cost Center, role: menuitem }
+  - unless: "${marExists}"
+    fill:
+      within: General Information
+      fields:
+        Cost Center: MAR-${grp}
+        Name: Marketing IEE2E ${grp}
+        Description: Marketing IEE2E ${grp}
+        Valid From: ${yearStart}
+        Valid To: 31.12.2099
+        Person Responsible: ${user}
+        Cost Center Category: 9 (Marketing)
+  - unless: "${marExists}"
+    fill:
+      within: Organizational Units
+      fields:
+        Standard Hierarchy Node: IEE2E
+        Company Code: "1010"
+        Profit Center: P9${grp}
+  - name: Create (the page's button, not the list's)
+    unless: "${marExists}"
+    click: { text: Create, role: button, index: -1 }
+  - unless: "${marExists}"
+    expectNoError: true
+  - unless: "${marExists}"
+    expectText: { text: Edit, exact: true }
+
+  # MAN-###
+  - name: Search MAN-${grp} (the Cost Center filter only accepts existing ones)
+    fill: { label: Search, value: "MAN-${grp}", enter: true }
+  - click: Go
+  - name: MAN-${grp} there already?
+    detect: { row: "MAN-${grp}", var: manExists }
+  - fill: { label: Search, value: "", enter: true }
+  - unless: "${manExists}"
+    click: { text: Create, role: button }
+  - unless: "${manExists}"
+    click: { text: Cost Center, role: menuitem }
+  - unless: "${manExists}"
+    fill:
+      within: General Information
+      fields:
+        Cost Center: MAN-${grp}
+        Name: Manuf. IEE2E ${grp}
+        Description: Manufacturing IEE2E ${grp}
+        Valid From: ${yearStart}
+        Valid To: 31.12.2099
+        Person Responsible: ${user}
+        Cost Center Category: F (Production)
+  - unless: "${manExists}"
+    fill:
+      within: Organizational Units
+      fields:
+        Standard Hierarchy Node: IEE2E
+        Company Code: "1010"
+        Profit Center: P9${grp}
+  - name: Create (the page's button, not the list's)
+    unless: "${manExists}"
+    click: { text: Create, role: button, index: -1 }
+  - unless: "${manExists}"
+    expectNoError: true
+  - unless: "${manExists}"
+    expectText: { text: Edit, exact: true }
 
   - openApp: { title: Manage Cost Center Groups }
-  - fill: { Cost Center Group: IEE2E }
-  - click: Go
-  - click: { text: IEE2E, role: link }
-  - expectText: MAR-${grp}
-  - expectText: MAN-${grp}
+  - name: Close "New Version Available"
+    optional: true
+    timeout: 8000
+    click: { text: Close, dialog: true }
+  - fill:
+      Cost Center Group: 1~IEE2E
+      Controlling Area: A000
+  - click: Continue
+  - name: Find MAR-${grp} in the (collapsed) hierarchy
+    fill: { Find: "MAR-${grp}" }
+  - click: Find All
+  - expectText: { text: "MAR-${grp}", dialog: true }
+  - name: Close the hit list
+    click: { text: OK, dialog: true, role: button }
+  - name: Find MAN-${grp}
+    fill: { Find: "MAN-${grp}" }
+  - click: Find All
+  - expectText: { text: "MAN-${grp}", dialog: true }
+  - click: { text: OK, dialog: true, role: button }
