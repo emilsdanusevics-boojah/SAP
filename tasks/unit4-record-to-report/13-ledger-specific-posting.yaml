@@ -5,9 +5,13 @@ tags: [unit4, fi, posting]
 description: |
   The guide creates the 2L entry via Manage Journal Entries > New > Similar Journal Entry;
   this task posts it directly with the same data, which gives the same result.
+  An entry whose number was captured by an earlier run (jeProvision0L / 2L) is not posted again.
 steps:
-  - openApp: { title: Post General Journal Entries }
-  - fill:
+  # 1. 0L entry
+  - unless: "${jeProvision0L}"
+    openApp: { title: Post General Journal Entries }
+  - unless: "${jeProvision0L}"
+    fill:
       Journal Entry Date: ${day(15, -1m)}
       Posting Date: ${day(15, -1m)}
       Journal Entry Type: SA
@@ -15,26 +19,39 @@ steps:
       Transaction Currency: EUR
       Ledger Group: 0L
       Header Text: Provision IEE2E-${grp} 0L
-  - press: Enter
-  - fillCell: { within: Line Items, row: 1, column: G/L Account, value: "66019900" }
-  - fillCell: { within: Line Items, row: 1, column: Debit, value: "1000" }
-  - click: { inRow: "66019900", role: button, index: 0 }
-  - fill:
+  - unless: "${jeProvision0L}"
+    press: Enter
+  - unless: "${jeProvision0L}"
+    fillCell: { within: Line Items, row: 1, column: G/L Account, value: "66019900" }
+  - unless: "${jeProvision0L}"
+    fillCell: { within: Line Items, row: 1, column: Debit, value: "1000" }
+  - unless: "${jeProvision0L}"
+    name: Expand line item 1 details (>)
+    click: { selector: "li.sapMLIB .sapMPanelHeadingDiv button.sapMBtn", within: Line Items, index: 0 }
+  - unless: "${jeProvision0L}"
+    fill:
       Item Text: Provision IEE2E-${grp} 0L
       Cost Center: BIKEA-${grp}
-  - fillCell: { within: Line Items, row: 2, column: G/L Account, value: "24031100" }
-  - fillCell: { within: Line Items, row: 2, column: Credit, value: "1000" }
-  - click: Post
-  - expectMessage:
+  - unless: "${jeProvision0L}"
+    fillCell: { within: Line Items, row: 2, column: G/L Account, value: "24031100" }
+  - unless: "${jeProvision0L}"
+    fillCell: { within: Line Items, row: 2, column: Credit, value: "1000" }
+  - unless: "${jeProvision0L}"
+    click: Post
+  - unless: "${jeProvision0L}"
+    expectMessage:
       regex: "posted|\\d{9,10}"
       capture: { var: jeProvision0L, regex: "(\\d{9,10})" }
-  - optional: true
-    click: { text: Display, dialog: true }
-  - optional: true
-    expectText: 0L
+  - name: Close the success message
+    optional: true
+    timeout: 5000
+    click: { text: OK, dialog: true, role: button }
 
-  - openApp: { title: Post General Journal Entries }
-  - fill:
+  # 2. 2L entry
+  - unless: "${jeProvision2L}"
+    openApp: { title: Post General Journal Entries }
+  - unless: "${jeProvision2L}"
+    fill:
       Journal Entry Date: ${day(15, -1m)}
       Posting Date: ${day(15, -1m)}
       Journal Entry Type: SA
@@ -42,19 +59,33 @@ steps:
       Transaction Currency: EUR
       Ledger Group: 2L
       Header Text: Provision IEE2E-${grp} 2L
-  - press: Enter
-  - fillCell: { within: Line Items, row: 1, column: G/L Account, value: "66019900" }
-  - fillCell: { within: Line Items, row: 1, column: Debit, value: "2000" }
-  - click: { inRow: "66019900", role: button, index: 0 }
-  - fill:
+  - unless: "${jeProvision2L}"
+    press: Enter
+  - unless: "${jeProvision2L}"
+    fillCell: { within: Line Items, row: 1, column: G/L Account, value: "66019900" }
+  - unless: "${jeProvision2L}"
+    fillCell: { within: Line Items, row: 1, column: Debit, value: "2000" }
+  - unless: "${jeProvision2L}"
+    name: Expand line item 1 details (>)
+    click: { selector: "li.sapMLIB .sapMPanelHeadingDiv button.sapMBtn", within: Line Items, index: 0 }
+  - unless: "${jeProvision2L}"
+    fill:
       Item Text: Provision IEE2E-${grp} 2L
       Cost Center: BIKEA-${grp}
-  - fillCell: { within: Line Items, row: 2, column: G/L Account, value: "24031100" }
-  - fillCell: { within: Line Items, row: 2, column: Credit, value: "2000" }
-  - click: Post
-  - expectMessage:
+  - unless: "${jeProvision2L}"
+    fillCell: { within: Line Items, row: 2, column: G/L Account, value: "24031100" }
+  - unless: "${jeProvision2L}"
+    fillCell: { within: Line Items, row: 2, column: Credit, value: "2000" }
+  - unless: "${jeProvision2L}"
+    click: Post
+  - unless: "${jeProvision2L}"
+    expectMessage:
       regex: "posted|\\d{9,10}"
       capture: { var: jeProvision2L, regex: "(\\d{9,10})" }
+  - name: Close the success message
+    optional: true
+    timeout: 5000
+    click: { text: OK, dialog: true, role: button }
 
   # 3. Display line items per ledger
   - openApp: { title: Display Line Items in General Ledger }
@@ -62,7 +93,6 @@ steps:
       Ledger: 0L
       Company Code: "1010"
       G/L Account: "24031100"
-      Fiscal Year: ${year}
   - select: { label: Status, value: All Items }
   - addFilter: Profit Center
   - fill: { Profit Center: "P9${grp}" }
