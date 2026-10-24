@@ -30,7 +30,7 @@ steps:
   - click: Post
   - expectMessage:
       regex: "created|posted"
-      capture: { var: assetInvoice, regex: "(\\d{10})" }
+      capture: { var: assetInvoice, regex: "(\\d{9,10})" }
   - click: { text: "No", dialog: true }
 
   - openApp: { title: Manage Fixed Assets }

@@ -29,7 +29,7 @@ steps:
   - click: Post
   - expectMessage:
       regex: "created|posted"
-      capture: { var: apInvoice1, regex: "(\\d{10})" }
+      capture: { var: apInvoice1, regex: "(\\d{9,10})" }
   - name: Do not enter another invoice
     click: { text: "No", dialog: true }
 

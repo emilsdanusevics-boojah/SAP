@@ -124,9 +124,19 @@ function skippedSteps(task, from) {
 
 const truthy = (v) => !['', '0', 'false', 'no'].includes(String(v ?? '').trim().toLowerCase());
 
+// A variable nothing has set yet counts as empty in a condition.
+function conditionValue(expr, vars, cfg) {
+  try {
+    return interpolate(expr, vars, cfg);
+  } catch (err) {
+    if (/Unknown variable/.test(err.message)) return '';
+    throw err;
+  }
+}
+
 function conditionSkip(meta, vars, cfg) {
-  if ('when' in meta && !truthy(interpolate(meta.when, vars, cfg))) return `when ${meta.when} not met`;
-  if ('unless' in meta && truthy(interpolate(meta.unless, vars, cfg))) return `unless ${meta.unless} met`;
+  if ('when' in meta && !truthy(conditionValue(meta.when, vars, cfg))) return `when ${meta.when} not met`;
+  if ('unless' in meta && truthy(conditionValue(meta.unless, vars, cfg))) return `unless ${meta.unless} met`;
   return null;
 }
 

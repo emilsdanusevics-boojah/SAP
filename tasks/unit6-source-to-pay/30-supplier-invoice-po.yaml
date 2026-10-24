@@ -23,7 +23,7 @@ steps:
   - click: Post
   - expectMessage:
       regex: "created|posted"
-      capture: { var: poInvoice, regex: "(\\d{10})" }
+      capture: { var: poInvoice, regex: "(\\d{9,10})" }
   - click: { text: "No", dialog: true }
 
   - openApp: { title: Supplier Invoice List }

@@ -15,8 +15,8 @@ steps:
   - fillCell: { within: Items, row: 1, column: Target Quantity, value: "1000" }
   - click: Create
   - expectMessage:
-      regex: "\\d{10}"
-      capture: { var: contractNo, regex: "(\\d{10})" }
+      regex: "\\d{9,10}"
+      capture: { var: contractNo, regex: "(\\d{9,10})" }
 
   - openApp: { title: Manage Sources of Supply }
   - fill: { Material: "R124-${grp}" }

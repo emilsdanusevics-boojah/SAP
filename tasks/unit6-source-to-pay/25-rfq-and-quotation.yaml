@@ -33,8 +33,8 @@ steps:
   - click: { text: Create, index: -1 }
   - click: Publish
   - expectMessage:
-      regex: "\\d{10}"
-      capture: { var: rfqNo, regex: "(\\d{10})" }
+      regex: "\\d{9,10}"
+      capture: { var: rfqNo, regex: "(\\d{9,10})" }
 
   # 2. Quotations from both bidders
   - openApp: { title: Manage RFQs }

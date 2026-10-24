@@ -15,8 +15,8 @@ steps:
     fillCell: { row: 2, column: Storage Location, value: 101C }
   - click: Post
   - expectMessage:
-      regex: "\\d{10}"
-      capture: { var: grMatDoc, regex: "(\\d{10})" }
+      regex: "\\d{9,10}"
+      capture: { var: grMatDoc, regex: "(\\d{9,10})" }
   - optional: true
     click: { text: [OK, Ok], dialog: true }
 

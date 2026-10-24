@@ -26,8 +26,8 @@ steps:
   - fillCell: { within: Line Items, row: 2, column: Credit, value: "1000" }
   - click: Post
   - expectMessage:
-      regex: "posted|\\d{10}"
-      capture: { var: jeProvision0L, regex: "(\\d{10})" }
+      regex: "posted|\\d{9,10}"
+      capture: { var: jeProvision0L, regex: "(\\d{9,10})" }
   - optional: true
     click: { text: Display, dialog: true }
   - optional: true
@@ -53,8 +53,8 @@ steps:
   - fillCell: { within: Line Items, row: 2, column: Credit, value: "2000" }
   - click: Post
   - expectMessage:
-      regex: "posted|\\d{10}"
-      capture: { var: jeProvision2L, regex: "(\\d{10})" }
+      regex: "posted|\\d{9,10}"
+      capture: { var: jeProvision2L, regex: "(\\d{9,10})" }
 
   # 3. Display line items per ledger
   - openApp: { title: Display Line Items in General Ledger }

@@ -16,8 +16,8 @@ steps:
   - click: Check
   - click: Post
   - expectMessage:
-      regex: "posted|\\d{10}"
-      capture: { var: prodGrDoc, regex: "(\\d{10})" }
+      regex: "posted|\\d{9,10}"
+      capture: { var: prodGrDoc, regex: "(\\d{9,10})" }
 
   - openApp: { title: Manage Production Orders }
   - fill: { Material: "F1-${grp}" }

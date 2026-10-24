@@ -27,8 +27,8 @@ steps:
   - expectText: "0,00"
   - click: Post
   - expectMessage:
-      regex: "\\d{10}"
-      capture: { var: paymentJE, regex: "(\\d{10})" }
+      regex: "\\d{9,10}"
+      capture: { var: paymentJE, regex: "(\\d{9,10})" }
 
   - openApp: { title: Manage Customer Line Items }
   - fill:

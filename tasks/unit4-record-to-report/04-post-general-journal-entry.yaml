@@ -3,55 +3,99 @@ exercise: 4
 title: "Post a General Journal Entry"
 tags: [unit4, fi, posting]
 requires: [IEE2E-03]
+vars:
+  notePending: ""
+description: >
+  Posts two journal entries. An entry whose number was captured by an earlier run
+  (jeCashReceipt, jeOfficeSupplies) is not posted again; --reset-state forgets them.
 steps:
-  # 1. Cash receipt on bank account (incoming checks)
   - openApp: { title: Post General Journal Entries }
-  - fill:
+
+  # 1. Cash receipt on bank account (incoming checks)
+  - unless: "${jeCashReceipt}"
+    fill:
       Journal Entry Date: ${today}
       Posting Date: ${today}
       Journal Entry Type: SA
       Company Code: "1010"
       Transaction Currency: EUR
-  - fillCell: { within: Line Items, row: 1, column: G/L Account, value: "10010000" }
-  - fillCell: { within: Line Items, row: 1, column: Debit, value: "500" }
-  - fillCell: { within: Line Items, row: 2, column: G/L Account, value: "11002000" }
-  - fillCell: { within: Line Items, row: 2, column: Credit, value: "500", enter: true }
+  - unless: "${jeCashReceipt}"
+    fillCell: { within: Line Items, row: 1, column: G/L Account, value: "10010000" }
+  - unless: "${jeCashReceipt}"
+    fillCell: { within: Line Items, row: 1, column: Debit, value: "500" }
+  - unless: "${jeCashReceipt}"
+    fillCell: { within: Line Items, row: 2, column: G/L Account, value: "11002000" }
+  - unless: "${jeCashReceipt}"
+    fillCell: { within: Line Items, row: 2, column: Credit, value: "500", enter: true }
   - name: Value Date (mandatory for 11002000)
+    unless: "${jeCashReceipt}"
     optional: true
     fill: { Value Date: "${today}" }
-  - click: Simulate
-  - click: Post
-  - expectMessage:
-      regex: "posted|\\d{10}"
-      capture: { var: jeCashReceipt, regex: "(\\d{10})" }
-  - click: Back
+  - unless: "${jeCashReceipt}"
+    click: Simulate
+  - unless: "${jeCashReceipt}"
+    click: Post
+  - unless: "${jeCashReceipt}"
+    expectMessage:
+      regex: "posted|\\d{9,10}"
+      capture: { var: jeCashReceipt, regex: "(\\d{9,10})" }
+  - name: Close the success message
+    optional: true
+    timeout: 3000
+    click: { text: [OK, Ok, Close], dialog: true }
+  - name: Back to an empty entry
+    unless: "${jeOfficeSupplies}"
+    openApp: { title: Post General Journal Entries }
 
   # 2. Cash payment of office supplies with 10% input tax, plus a note
-  - fill:
+  - unless: "${jeOfficeSupplies}"
+    fill:
       Journal Entry Date: ${today}
       Posting Date: ${today}
       Journal Entry Type: SA
       Company Code: "1010"
       Transaction Currency: EUR
-  - fillCell: { within: Line Items, row: 1, column: G/L Account, value: "65100${grp}" }
-  - fillCell: { within: Line Items, row: 1, column: Debit, value: "1${grp}" }
+  - unless: "${jeOfficeSupplies}"
+    fillCell: { within: Line Items, row: 1, column: G/L Account, value: "65100${grp}" }
+  - unless: "${jeOfficeSupplies}"
+    fillCell: { within: Line Items, row: 1, column: Debit, value: "1${grp}" }
   - name: Expand line item 1 details (>)
-    click: { inRow: "65100${grp}", role: button, index: 0 }
-  - fill:
+    unless: "${jeOfficeSupplies}"
+    click: { selector: "li.sapMLIB .sapMPanelHeadingDiv button.sapMBtn", within: Line Items, index: 0 }
+  - unless: "${jeOfficeSupplies}"
+    fill:
       Item Text: Simple post ${grp}
       Tax Code: 1I
       Cost Center: BIKEA-${grp}
-  - fillCell: { within: Line Items, row: 2, column: G/L Account, value: "10010000" }
-  - fillCell: { within: Line Items, row: 2, column: Credit, value: "1${grp}" }
-  - check: Calculate Tax
-  - uncheck: Net Entry
-  - click: Simulate
-  - expectText: 1I
-  - click: Post
-  - expectMessage:
-      regex: "posted|\\d{10}"
-      capture: { var: jeOfficeSupplies, regex: "(\\d{10})" }
-  - click: Notes
-  - fill: { selector: "textarea", value: Urgent }
-  - click: [Submit, Post, Send]
-  - expectText: Urgent
+  - unless: "${jeOfficeSupplies}"
+    fillCell: { within: Line Items, row: 2, column: G/L Account, value: "10010000" }
+  - unless: "${jeOfficeSupplies}"
+    fillCell: { within: Line Items, row: 2, column: Credit, value: "1${grp}" }
+  - unless: "${jeOfficeSupplies}"
+    check: Calculate Tax
+  - unless: "${jeOfficeSupplies}"
+    uncheck: Net Entry
+  - unless: "${jeOfficeSupplies}"
+    click: Simulate
+  - unless: "${jeOfficeSupplies}"
+    expectText: 1I
+  - unless: "${jeOfficeSupplies}"
+    set: { notePending: "yes" }
+  - unless: "${jeOfficeSupplies}"
+    click: Post
+  - unless: "${jeOfficeSupplies}"
+    expectMessage:
+      regex: "posted|\\d{9,10}"
+      capture: { var: jeOfficeSupplies, regex: "(\\d{9,10})" }
+  - name: Close the success message
+    when: "${notePending}"
+    click: { text: OK, dialog: true, role: button }
+  - name: Note on the entry just posted
+    when: "${notePending}"
+    click: { text: Notes, role: tab }
+  - when: "${notePending}"
+    fill: { selector: "textarea", value: Urgent }
+  - when: "${notePending}"
+    click: [Submit, Post, Send]
+  - when: "${notePending}"
+    expectText: Urgent

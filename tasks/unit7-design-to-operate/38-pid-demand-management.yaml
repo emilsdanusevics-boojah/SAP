@@ -34,8 +34,8 @@ steps:
     selectRow: { contains: "1010", dialog: true }
   - click: Post
   - expectMessage:
-      regex: "Material document \\d+ posted|\\d{10}"
-      capture: { var: initialStockDoc, regex: "(\\d{10})" }
+      regex: "Material document \\d+ posted|\\d{9,10}"
+      capture: { var: initialStockDoc, regex: "(\\d{9,10})" }
 
   # Task 2: area of responsibility
   - openApp: { title: My Area of Responsibility - MRP Controller }

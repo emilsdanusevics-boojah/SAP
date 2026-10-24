@@ -27,7 +27,7 @@ steps:
   - click: Post
   - expectMessage:
       regex: "created|posted"
-      capture: { var: apInvoice2, regex: "(\\d{10})" }
+      capture: { var: apInvoice2, regex: "(\\d{9,10})" }
   - click: { text: "No", dialog: true }
 
   # 2. Single payment

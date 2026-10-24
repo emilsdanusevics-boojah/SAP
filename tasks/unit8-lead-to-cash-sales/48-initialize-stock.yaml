@@ -16,7 +16,7 @@ steps:
   - check: Item OK | OK
   - click: Check
   - click: Post
-  - expectMessage: { regex: "posted|\\d{10}" }
+  - expectMessage: { regex: "posted|\\d{9,10}" }
 
   - openApp: { title: Stock - Single Material }
   - fill:

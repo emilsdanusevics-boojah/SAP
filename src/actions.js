@@ -7,6 +7,7 @@ const {
   locate,
   searchScopes,
   fieldBuilders,
+  escapeRe,
   clickBuilders,
   rowBuilders,
   settle,
@@ -137,6 +138,8 @@ async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within,
   let seen = [];
   for (;;) {
     for (const scope of await searchScopes(ctx.page, { within, dialogOnly: !!dialog })) {
+      const labelled = await labelledItemField(scope, { row, rowContains, column });
+      if (labelled) return labelled;
       const headers = scope.locator('[role="columnheader"], th').filter({ visible: true });
       const names = (await headers.allInnerTexts().catch(() => [])).map(norm);
       if (names.length) seen = names;
@@ -168,6 +171,27 @@ async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within,
     }
     await ctx.page.waitForTimeout(300);
   }
+}
+
+// Line items laid out as a list with an inline label per field ("1 Company Code [..] G/L Account [..]
+// Debit [..]") instead of a table with column headers: the field labelled `column` in the n-th item.
+async function labelledItemField(scope, { row = 1, rowContains, column }) {
+  const labels = alternatives(column);
+  const pattern = `^\\s*(${labels.map(escapeRe).join('|')})\\s*[:*]?\\s*$`;
+  // A self-contained selector: an inner locator built from `scope` would be searched for inside each item.
+  let items = scope
+    .locator(`:is(.sapMLIB, [role="listitem"]):has(:is(label, .sapMLabel) :text-matches(${JSON.stringify(pattern)}, "i"))`)
+    .filter({ visible: true });
+  if (rowContains) items = items.filter({ hasText: rowContains });
+  const n = await items.count().catch(() => 0);
+  if (!n) return null;
+  const item = rowContains ? items.first() : items.nth(row < 0 ? n + row : row - 1);
+  if (!(await item.count())) return null;
+  for (const build of fieldBuilders(labels)) {
+    const f = build(item).filter({ visible: true }).first();
+    if ((await f.count().catch(() => 0)) > 0) return f;
+  }
+  return null;
 }
 
 async function findRow(ctx, a) {
@@ -351,7 +375,8 @@ const actions = {
   // fillCell: { rowContains: "S11-035", column: "SLoc", value: "101A", within: "Items" }
   async fillCell(ctx, a) {
     const cell = await findCell(ctx, a);
-    const input = cell.locator('input:not([type="hidden"]), textarea').first();
+    const isField = await cell.evaluate((e) => ['INPUT', 'TEXTAREA'].includes(e.tagName)).catch(() => false);
+    const input = isField ? cell : cell.locator('input:not([type="hidden"]), textarea').first();
     await typeInto(ctx, input, a);
   },
 

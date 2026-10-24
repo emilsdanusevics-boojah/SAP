@@ -277,6 +277,7 @@ module.exports = {
   sectionLocator,
   locate,
   fieldBuilders,
+  escapeRe,
   clickBuilders,
   rowBuilders,
   waitForUI5,
