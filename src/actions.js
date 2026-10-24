@@ -32,11 +32,32 @@ async function findField(ctx, a) {
   let loc = await locate(ctx.page, builders, { timeout: ctx.stepTimeout, what: `field "${[].concat(a.label || a.selector).join('" / "')}"`, ...scopeOf(a) });
   // getByLabel can land on a UI5 wrapper div; drill down to the real input.
   const tag = await loc.evaluate((e) => e.tagName.toLowerCase()).catch(() => '');
+  // sap.m.Select: the label points at a 1px hidden helper; the clickable control is its root.
+  const id = (await loc.getAttribute('id').catch(() => null)) || '';
+  const m = id.match(/^(.*)-(hiddenSelect|hiddenInput)$/);
+  if (m) {
+    const root = loc.locator(`xpath=ancestor::*[@id="${m[1]}"]`).first();
+    if ((await root.count()) > 0) return root;
+  }
   if (!['input', 'textarea', 'select'].includes(tag)) {
     const inner = loc.locator('input:not([type="hidden"]), textarea').first();
     if ((await inner.count()) > 0) loc = inner;
   }
   return loc;
+}
+
+const isUi5Select = (field) => field.evaluate((e) => e.classList.contains('sapMSlt')).catch(() => false);
+
+// Open a dropdown and click the option; returns false when no option matches.
+async function pickOption(ctx, field, a) {
+  await field.click();
+  const option = await locate(
+    ctx.page,
+    [(s) => s.getByRole('option', { name: a.value, exact: true }), (s) => s.getByRole('option', { name: a.value })],
+    { timeout: 3000, what: `option "${a.value}"`, frame: a.frame }
+  ).catch(() => null);
+  if (option) await option.click();
+  return !!option;
 }
 
 async function typeInto(ctx, field, { value, enter, type }) {
@@ -54,7 +75,15 @@ async function typeInto(ctx, field, { value, enter, type }) {
 }
 
 async function fillOne(ctx, a) {
-  await typeInto(ctx, await findField(ctx, a), a);
+  const field = await findField(ctx, a);
+  if (await isUi5Select(field)) {
+    const shown = (await field.innerText().catch(() => '')).trim();
+    if (shown && shown.startsWith(String(a.value))) return;
+    if (!(await pickOption(ctx, field, a))) throw new Error(`No option "${a.value}" in "${a.label}"`);
+    await settle(ctx.page, ctx.stepTimeout);
+    return;
+  }
+  await typeInto(ctx, field, a);
 }
 
 async function readFieldValue(ctx, a) {
@@ -241,20 +270,10 @@ const actions = {
     const tag = await field.evaluate((e) => e.tagName.toLowerCase());
     if (tag === 'select') {
       await field.selectOption({ label: a.value }).catch(() => field.selectOption(a.value));
-    } else {
-      await field.click();
-      const option = await locate(
-        ctx.page,
-        [(s) => s.getByRole('option', { name: a.value, exact: true }), (s) => s.getByRole('option', { name: a.value })],
-        { timeout: 3000, what: `option "${a.value}"`, frame: a.frame }
-      ).catch(() => null);
-      if (option) {
-        await option.click();
-      } else {
-        // Editable ComboBox / input with suggestions: type the value and confirm.
-        await field.fill(a.value);
-        await field.press('Enter');
-      }
+    } else if (!(await pickOption(ctx, field, a))) {
+      // Editable ComboBox / input with suggestions: type the value and confirm.
+      await field.fill(a.value);
+      await field.press('Enter');
     }
     await settle(ctx.page, ctx.stepTimeout);
   },
@@ -407,7 +426,7 @@ const actions = {
   // expectText: "Standard Order"  |  { text, exact, within, not: true }
   async expectText(ctx, arg) {
     const a = asObj(arg, 'text');
-    const builders = [(s) => s.getByText(a.text, { exact: !!a.exact })];
+    const builders = alternatives(a.text).map((t) => (s) => s.getByText(t, { exact: !!a.exact }));
     if (a.not) {
       const found = await locate(ctx.page, builders, { timeout: 1500, what: a.text, ...scopeOf(a) }).catch(() => null);
       if (found) throw new Error(`Text "${a.text}" should not be visible`);

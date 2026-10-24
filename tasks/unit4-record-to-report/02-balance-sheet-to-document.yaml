@@ -14,7 +14,7 @@ steps:
     optional: true
     select: { label: Statement Type, value: Normal }
   - click: Go
-  - expectText: ASSETS
+  - expectText: "A S S E T S | ASSETS"
   - click: Expand All
   - fill: { label: Search, value: "10010000", enter: true }
   - expectText: Petty Cash

@@ -159,7 +159,7 @@ Inside `{ ... }`, quote any value that contains `${...}`.
 | `upload` | Sets a file on the page's file input |
 | `press` | Presses a key: `Enter`, `F3`, `F8`, `Control+S` ... |
 | `wait`, `waitFor` | Pauses, or waits for text or an element |
-| `expectText` | Text must be visible (`within`, `not`) |
+| `expectText` | Text must be visible (`within`, `not`); alternatives as `A \| B` |
 | `expectField` | A field's value must match (`value` / `contains` / `notEmpty`) |
 | `expectMessage` | A success/status message must appear; can `capture` a number from it |
 | `expectNoError` | Fails if an error message is shown |
