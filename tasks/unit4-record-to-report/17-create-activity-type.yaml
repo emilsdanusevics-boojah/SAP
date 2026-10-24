@@ -2,21 +2,97 @@ id: IEE2E-17
 exercise: 17
 title: "Create Activity Type IT###"
 tags: [unit4, co, master-data]
+description: >
+  Creates activity type IT### (unit H, all cost center categories, allocation cost element 94311000).
+  Not created again when it exists; own drafts left by an earlier attempt are discarded first.
 steps:
   - openApp: { title: Manage Activity Types }
-  - click: Create
-  - optional: true
+
+  # Discard drafts left by earlier attempts (up to three)
+  - select: { label: Editing Status, value: Own Draft }
+  - click: Go
+  - detect: { row: Draft, var: atDraft }
+  - when: "${atDraft}"
+    openRow: Draft
+  - when: "${atDraft}"
+    click: Discard Draft
+  - name: Confirm the discard
+    when: "${atDraft}"
+    optional: true
+    timeout: 5000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${atDraft}"
+    openApp: { title: Manage Activity Types }
+  - select: { label: Editing Status, value: Own Draft }
+  - click: Go
+  - detect: { row: Draft, var: atDraft }
+  - when: "${atDraft}"
+    openRow: Draft
+  - when: "${atDraft}"
+    click: Discard Draft
+  - name: Confirm the discard
+    when: "${atDraft}"
+    optional: true
+    timeout: 5000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${atDraft}"
+    openApp: { title: Manage Activity Types }
+  - select: { label: Editing Status, value: Own Draft }
+  - click: Go
+  - detect: { row: Draft, var: atDraft }
+  - when: "${atDraft}"
+    openRow: Draft
+  - when: "${atDraft}"
+    click: Discard Draft
+  - name: Confirm the discard
+    when: "${atDraft}"
+    optional: true
+    timeout: 5000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${atDraft}"
+    openApp: { title: Manage Activity Types }
+  - name: Saved activity types only
+    select: { label: Editing Status, value: All (Hiding Drafts) }
+
+  - fill: { label: Search, value: "IT${grp}", enter: true }
+  - click: Go
+  - name: IT${grp} there already?
+    detect: { row: "IT${grp}", var: atExists }
+  - fill: { label: Search, value: "", enter: true }
+
+  - unless: "${atExists}"
+    click: { text: Create, role: button }
+  - name: Full screen
+    unless: "${atExists}"
+    optional: true
+    timeout: 3000
     click: Full Screen
-  - fill:
-      Activity Type: IT${grp}
-      Name: IT Services IEE2E${grp}
-      Description: IT Services IEE2E${grp}
-      Valid From: ${yearStart}
-      Valid To: 31.12.2099
-      Activity Unit: H
-      Cost Center Categories: "*"
-      Activity Type Category: "1"
-      Allocation Cost Element: "94311000"
-  - click: Create
-  - expectNoError: true
+  - unless: "${atExists}"
+    fill:
+      within: General Information
+      fields:
+        Activity Type: IT${grp}
+        Name: IT Services IEE2E${grp}
+        Description: IT Services IEE2E${grp}
+        Valid From: ${yearStart}
+        Valid To: 31.12.2099
+        Activity Unit: H
+  - name: Cost Center Categories (selection dialog)
+    unless: "${atExists}"
+    click: { field: Cost Center Categories, within: General Information }
+  - unless: "${atExists}"
+    selectRow: { contains: "* (All Categories)", dialog: true }
+  - unless: "${atExists}"
+    click: { text: OK, dialog: true, role: button }
+  - unless: "${atExists}"
+    select: { label: Activity Type Category, value: "1" }
+  - unless: "${atExists}"
+    fill: { Allocation Cost Element: "94311000" }
+  - name: Create (the page's button)
+    unless: "${atExists}"
+    click: { text: Create, role: button, index: -1 }
+  - unless: "${atExists}"
+    expectNoError: true
+  - unless: "${atExists}"
+    expectText: { text: Edit, exact: true }
   - expectText: IT${grp}

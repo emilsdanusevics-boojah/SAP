@@ -360,6 +360,12 @@ const actions = {
   // click: { text, role, index, selector, frame, double: true }
   async click(ctx, arg) {
     const a = asObj(arg, 'text');
+    // click: { field: "Cost Center Categories" } clicks into a field found by its label (opens its dialog).
+    if (a.field) {
+      await (await findField(ctx, { ...a, label: a.field })).click();
+      await settle(ctx.page, ctx.stepTimeout);
+      return;
+    }
     const builders = a.selector
       ? [(s) => s.locator(a.selector)]
       : a.inRow

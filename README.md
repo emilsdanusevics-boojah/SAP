@@ -150,7 +150,7 @@ Inside `{ ... }`, quote any value that contains `${...}`.
 | `clear` | Empties a field |
 | `select` | Picks a dropdown or combo box value: `{ label, value }`, or `{ combobox: n, value }` for unlabelled dropdowns (GUI) |
 | `check` / `uncheck` | Sets a checkbox by label |
-| `click` | Clicks a button, link, tab or menu item: text, or `[A, B]` alternatives. Options: `within`, `dialog`, `inRow`, `role`, `index` (-1 is the last match) |
+| `click` | Clicks a button, link, tab or menu item: text, or `[A, B]` alternatives. Options: `within`, `dialog`, `inRow`, `role`, `index` (-1 is the last match). `{ field: <label> }` clicks into a field (e.g. one that opens a selection dialog) |
 | `selectRow` | Ticks the table row(s) containing a text (`contains`, `within`, `dialog`) |
 | `openRow` | Navigates into the row containing a text (">" or a click on the row); `{ row: n, within }` picks a row by number |
 | `fillCell` | Fills a table cell by column header. Pick the row with `row` (1-based; -1 is the last), `rowContains`, or `firstEmpty` |

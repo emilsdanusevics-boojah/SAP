@@ -11,11 +11,11 @@ steps:
   - click: Go
   - openRow: 65100${grp}
   - expectText: Primary Costs or Revenue
-  - capture: { var: costElemCat_65100, from: field, label: Cost Element Category }
+  - capture: { var: costElemCat_65100, from: cell, within: Controlling Data, row: 1, column: Cost Element Category }
   - click: Back
   - clear: G/L Account
   - fill: { G/L Account: "94311000" }
   - click: Go
   - openRow: "94311000"
   - expectText: Secondary Costs
-  - capture: { var: costElemCat_94311000, from: field, label: Cost Element Category }
+  - capture: { var: costElemCat_94311000, from: cell, within: Controlling Data, row: 1, column: Cost Element Category }
