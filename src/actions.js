@@ -851,6 +851,19 @@ async function openViaSearch(ctx, title) {
   ).catch(() => null);
   if (suggestion) {
     await suggestion.click();
+  } else if (/ - /.test(title)) {
+    // "Title - Subtitle": tiles show the subtitle on its own line, so search for the title and
+    // open the tile that also carries the subtitle.
+    const [main, sub] = title.split(/ - (.+)/);
+    await input.fill(main);
+    await input.press('Enter');
+    await settle(page, ctx.stepTimeout);
+    const tile = await locate(
+      page,
+      [(s) => s.locator(':is(a, [role="link"], [role="button"], li, [class*="Tile"], [class*="tile"])').filter({ hasText: main }).filter({ hasText: sub })],
+      { timeout: ctx.stepTimeout, what: `app "${main}" with subtitle "${sub}" in search results`, frame: 'main', index: 0 }
+    );
+    await tile.getByText(main, { exact: true }).first().click();
   } else {
     await input.press('Enter');
     await settle(page, ctx.stepTimeout);

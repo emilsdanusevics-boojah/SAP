@@ -3,9 +3,12 @@ exercise: 24
 title: "Create a Purchase Requisition"
 tags: [unit6, mm, purchasing]
 requires: [IEE2E-23]
+description: >
+  Two purchase requisitions for R124-###. A requisition whose description exists already
+  (FIRST / SECOND PR GR###) is not created again.
 steps:
   # 1. Default values for purchase requisitions
-  - openApp: { title: Default Settings for Users - Purchase Requisitions }
+  - openApp: { title: Default Settings for Users }
   - name: User ID (only when the app asks for it)
     optional: true
     timeout: 3000
@@ -16,8 +19,8 @@ steps:
       Storage Location: 101C
       Currency: EUR
       Purchasing Group: "000"
-      Purchasing Org.: "1010"
-      Purchasing Document Type: NB
+      Purch. Organization | Purchasing Org.: "1010"
+      Purchasing Doc. Type | Purchasing Document Type: NB
       Cost Center: MAN-${grp}
       Account Assignment Category: K
   - click: Save
@@ -25,21 +28,36 @@ steps:
 
   # 2. First purchase requisition
   - openApp: { title: Manage Purchase Requisitions - Professional }
-  - click: Create
-  - fill: { Purchase Requisition Descrip.: "FIRST PR GR${grp}" }
-  - click: [Create Material, Material]
-  - fill:
-      Account Assignment Cat.: K
-      Cost Center: MAN-${grp}
+  - fill: { label: Search, value: "FIRST PR GR${grp}", enter: true }
+  - click: Go
+  - name: FIRST PR GR${grp} there already?
+    detect: { row: "FIRST PR GR${grp}", var: pr1Exists }
+  - unless: "${pr1Exists}"
+    click: Create
+  - unless: "${pr1Exists}"
+    fill: { Purchase Requisition Description | Purchase Requisition Descrip.: "FIRST PR GR${grp}" }
+  - unless: "${pr1Exists}"
+    click: { text: Create, within: Items }
+  - unless: "${pr1Exists}"
+    click: [Create Material, Material]
+  - unless: "${pr1Exists}"
+    fill:
       Material: R124-${grp}
-      Quantity Requested: "20"
+      Quantity | Quantity Requested: "20"
       Delivery Date: ${date(+10d)}
-  - click: Apply
-  - click: Create
-  - name: Confirm the delivery date dialog
+  - name: Account assignment K / MAN-${grp} (K comes from the default settings)
+    unless: "${pr1Exists}"
+    fill: { Cost Center: "MAN-${grp}", within: Account Assignment }
+  - unless: "${pr1Exists}"
+    click: Apply
+  - unless: "${pr1Exists}"
+    click: Create
+  - unless: "${pr1Exists}"
+    name: Confirm the delivery date dialog
     optional: true
     click: { text: Create, dialog: true }
-  - expectMessage:
+  - unless: "${pr1Exists}"
+    expectMessage:
       regex: "\\d{8,10}"
       capture: { var: prNo1, regex: "(\\d{8,10})" }
 
@@ -50,27 +68,47 @@ steps:
   - openRow: FIRST PR GR${grp}
   - click: Edit
   - openRow: R124-${grp}
-  - fill: { Quantity Requested: "50" }
+  - fill: { Quantity | Quantity Requested: "50" }
   - click: Apply
   - click: Save
   - expectNoError: true
   - click: Back
 
   # 4. Copy as second PR without account assignment
-  - selectRow: FIRST PR GR${grp}
-  - click: Copy
-  - clear: Purchase Requisition Descrip.
-  - fill: { Purchase Requisition Descrip.: "SECOND PR GR${grp}" }
-  - openRow: R124-${grp}
-  - clear: [Account Assignment Cat., Account Assignment Category]
-  - fill:
-      Quantity Requested: "200"
+  - openApp: { title: Manage Purchase Requisitions - Professional }
+  - fill: { label: Search, value: "SECOND PR GR${grp}", enter: true }
+  - click: Go
+  - name: SECOND PR GR${grp} there already?
+    detect: { row: "SECOND PR GR${grp}", var: pr2Exists }
+  - unless: "${pr2Exists}"
+    fill: { label: Search, value: "GR${grp}", enter: true }
+  - unless: "${pr2Exists}"
+    click: Go
+  - unless: "${pr2Exists}"
+    selectRow: FIRST PR GR${grp}
+  - unless: "${pr2Exists}"
+    click: Copy
+  - unless: "${pr2Exists}"
+    clear: Purchase Requisition Description | Purchase Requisition Descrip.
+  - unless: "${pr2Exists}"
+    fill: { Purchase Requisition Description | Purchase Requisition Descrip.: "SECOND PR GR${grp}" }
+  - unless: "${pr2Exists}"
+    openRow: R124-${grp}
+  - unless: "${pr2Exists}"
+    clear: Account Assignment Category | Account Assignment Cat.
+  - unless: "${pr2Exists}"
+    fill:
+      Quantity | Quantity Requested: "200"
       Delivery Date: ${date(+13d)}
-  - click: Apply
-  - click: Create
-  - optional: true
+  - unless: "${pr2Exists}"
+    click: Apply
+  - unless: "${pr2Exists}"
+    click: Create
+  - unless: "${pr2Exists}"
+    optional: true
     click: { text: Create, dialog: true }
-  - expectMessage:
+  - unless: "${pr2Exists}"
+    expectMessage:
       regex: "\\d{8,10}"
       capture: { var: prNo2, regex: "(\\d{8,10})" }
 

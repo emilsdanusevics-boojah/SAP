@@ -105,12 +105,12 @@ steps:
   - unless: "${flcu01Exists}"
     click: Apply
   - unless: "${flcu01Exists}"
-    click: { text: Taxes, role: tab }
-  - unless: "${flcu01Exists}"
-    fillCell: { rowContains: Germany, column: Tax Classification, value: "1" }
-  - unless: "${flcu01Exists}"
-    click: Apply
-  - unless: "${flcu01Exists}"
+    click: { text: Tax Categories, role: tab }
+  - name: Tax classification 1 for Germany
+    unless: "${flcu01Exists}"
+    fillCell: { within: Tax Categories, rowContains: Germany, column: Tax Classification, value: "1" }
+  - name: Back from the role to the business partner
+    unless: "${flcu01Exists}"
     click: Apply
 
   - when: "${bpChanged}"
