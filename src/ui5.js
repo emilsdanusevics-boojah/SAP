@@ -207,7 +207,8 @@ function clickBuilders(texts, role) {
 function rowBuilders(contains) {
   return [
     (s) => s.getByRole('row').filter({ hasText: contains }),
-    (s) => s.locator('tr, [role="listitem"], [role="option"], .sapMLIB').filter({ hasText: contains }),
+    // Innermost rows only: classic GUI layouts nest the whole list in an outer table row.
+    (s) => s.locator('tr:not(:has(tr)), [role="listitem"], [role="option"], .sapMLIB').filter({ hasText: contains }),
   ];
 }
 

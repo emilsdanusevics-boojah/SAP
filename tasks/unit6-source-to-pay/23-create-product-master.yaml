@@ -17,7 +17,7 @@ steps:
   - unless: "${matExists}"
     fill: { label: Material, value: "R124-${grp}" }
   - unless: "${matExists}"
-    select: { label: Material Type, value: ROH }
+    select: { label: Material Type, value: Raw materials }
   - unless: "${matExists}"
     fill: { label: Material, index: 1, value: "R122-${grp}" }
   - unless: "${matExists}"
