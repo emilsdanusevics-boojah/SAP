@@ -104,11 +104,16 @@ steps:
     fill: { selector: "input[id*='Incoterms'][id$='-input-inner']:not([id*='Version']):not([id*='Location'])", value: FH }
   - unless: "${flcu01Exists}"
     click: Apply
+  - name: More sections (+n) of the role page
+    unless: "${flcu01Exists}"
+    optional: true
+    timeout: 5000
+    click: { text: [+1, +2, +3, +4], role: button }
   - unless: "${flcu01Exists}"
-    click: { text: Tax Categories, role: tab }
+    click: [Tax Classifications, Tax Classification]
   - name: Tax classification 1 for Germany
     unless: "${flcu01Exists}"
-    fillCell: { within: Tax Categories, rowContains: Germany, column: Tax Classification, value: "1" }
+    fillCell: { within: Tax Classifications | Tax Classification, rowContains: Germany, column: Tax Classification, value: "1" }
   - name: Back from the role to the business partner
     unless: "${flcu01Exists}"
     click: Apply

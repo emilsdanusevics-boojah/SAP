@@ -172,6 +172,18 @@ async function findCell(ctx, { row = 1, rowContains, firstEmpty, column, within,
         if (popin) return popin;
         continue;
       }
+      // Classic GUI tables address cells as [row, column] (lsmatrixrowindex / lsmatrixcolindex),
+      // with the header in row 0 and the selector column in a separate fixed part.
+      const lsCol = await headers.nth(col).getAttribute('lsmatrixcolindex');
+      if (lsCol !== null && !firstEmpty) {
+        let lsRow = row;
+        if (rowContains) {
+          const hit = scope.locator(`[lsmatrixcolindex]`).filter({ hasText: rowContains }).first();
+          lsRow = (await hit.count()) ? Number(await hit.getAttribute('lsmatrixrowindex')) : -1;
+        }
+        const cell = scope.locator(`[lsmatrixrowindex="${lsRow}"][lsmatrixcolindex="${lsCol}"]`).first();
+        if (lsRow > 0 && (await cell.count()) > 0) return cell;
+      }
       const ariaCol = await headers.nth(col).getAttribute('aria-colindex');
       const rows = scope
         .locator(':is([role="row"], tbody tr):not(:has([role="columnheader"], th))')
@@ -437,8 +449,15 @@ const actions = {
   async fillCell(ctx, a) {
     const cell = await findCell(ctx, a);
     const isField = await cell.evaluate((e) => ['INPUT', 'TEXTAREA'].includes(e.tagName)).catch(() => false);
-    const input = isField ? cell : cell.locator('input:not([type="hidden"]), textarea').first();
-    await typeInto(ctx, input, a);
+    const input = isField ? cell : cell.locator('input:not([type="hidden"]), textarea, [role="textbox"]').first();
+    const clickable = await input.click({ timeout: 5000 }).then(() => true).catch(() => false);
+    if (clickable) return typeInto(ctx, input, a);
+    // Some classic GUI cells do not take a click on the input itself: focus the cell and type.
+    await cell.click();
+    await ctx.page.keyboard.press('Control+A');
+    await ctx.page.keyboard.type(String(a.value));
+    await ctx.page.keyboard.press(a.enter ? 'Enter' : 'Tab');
+    await settle(ctx.page, ctx.stepTimeout);
   },
 
   // clickCell: { rowContains: "${prNo1}", column: "Assign Source of Supply" }   (link/button in that cell)
@@ -851,33 +870,40 @@ async function openViaSearch(ctx, title) {
   ).catch(() => null);
   if (suggestion) {
     await suggestion.click();
-  } else if (/ - /.test(title)) {
-    // "Title - Subtitle": tiles show the subtitle on its own line, so search for the title and
-    // open the tile that also carries the subtitle.
-    const [main, sub] = title.split(/ - (.+)/);
-    await input.fill(main);
-    await input.press('Enter');
-    await settle(page, ctx.stepTimeout);
-    const tile = await locate(
-      page,
-      [(s) => s.locator(':is(a, [role="link"], [role="button"], li, [class*="Tile"], [class*="tile"])').filter({ hasText: main }).filter({ hasText: sub })],
-      { timeout: ctx.stepTimeout, what: `app "${main}" with subtitle "${sub}" in search results`, frame: 'main', index: 0 }
-    );
-    await tile.getByText(main, { exact: true }).first().click();
   } else {
     await input.press('Enter');
     await settle(page, ctx.stepTimeout);
-    const result = await locate(
-      page,
-      [
-        (s) => s.getByRole('link', { name: title, exact: true }),
-        (s) => s.getByRole('button', { name: title, exact: true }),
-        (s) => s.getByRole('link', { name: title }),
-        (s) => s.getByText(title, { exact: true }),
-      ],
-      { timeout: ctx.stepTimeout, what: `app "${title}" in search results (is the business role assigned?)`, frame: 'main' }
-    );
-    await result.click();
+    const byTitle = [
+      (s) => s.getByRole('link', { name: title, exact: true }),
+      (s) => s.getByRole('button', { name: title, exact: true }),
+      (s) => s.getByRole('link', { name: title }),
+      (s) => s.getByText(title, { exact: true }),
+    ];
+    const split = / - /.test(title);
+    const result = await locate(page, byTitle, {
+      timeout: split ? 10000 : ctx.stepTimeout,
+      what: `app "${title}" in search results (is the business role assigned?)`,
+      frame: 'main',
+    }).catch((err) => {
+      if (!split) throw err;
+      return null;
+    });
+    if (result) {
+      await result.click();
+    } else {
+      // "Title - Subtitle": tiles show the subtitle on its own line, so search for the title and
+      // open the tile that also carries the subtitle.
+      const [main, sub] = title.split(/ - (.+)/);
+      await input.fill(main);
+      await input.press('Enter');
+      await settle(page, ctx.stepTimeout);
+      const tile = await locate(
+        page,
+        [(s) => s.locator(':is(a, [role="link"], [role="button"], li, [class*="Tile"], [class*="tile"])').filter({ hasText: main }).filter({ hasText: sub })],
+        { timeout: ctx.stepTimeout, what: `app "${main}" with subtitle "${sub}" in search results`, frame: 'main', index: 0 }
+      );
+      await tile.getByText(main, { exact: true }).first().click();
+    }
   }
   await page.waitForURL((u) => u.toString() !== before && !/#(Shell-home|Action-search)/.test(u.toString()), {
     timeout: ctx.stepTimeout,

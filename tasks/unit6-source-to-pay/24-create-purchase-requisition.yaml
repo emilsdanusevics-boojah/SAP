@@ -26,8 +26,54 @@ steps:
   - click: Save
   - expectNoError: true
 
-  # 2. First purchase requisition
+  # 2. First purchase requisition (drafts left by earlier attempts are discarded first, up to three)
   - openApp: { title: Manage Purchase Requisitions - Professional }
+  - select: { label: Editing Status, value: Own Draft }
+  - click: Go
+  - detect: { row: Draft, var: prDraft }
+  - when: "${prDraft}"
+    openRow: Draft
+  - when: "${prDraft}"
+    click: Discard Draft
+  - name: Confirm the discard
+    when: "${prDraft}"
+    optional: true
+    timeout: 5000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${prDraft}"
+    openApp: { title: Manage Purchase Requisitions - Professional }
+  - select: { label: Editing Status, value: Own Draft }
+  - click: Go
+  - detect: { row: Draft, var: prDraft }
+  - when: "${prDraft}"
+    openRow: Draft
+  - when: "${prDraft}"
+    click: Discard Draft
+  - name: Confirm the discard
+    when: "${prDraft}"
+    optional: true
+    timeout: 5000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${prDraft}"
+    openApp: { title: Manage Purchase Requisitions - Professional }
+  - select: { label: Editing Status, value: Own Draft }
+  - click: Go
+  - detect: { row: Draft, var: prDraft }
+  - when: "${prDraft}"
+    openRow: Draft
+  - when: "${prDraft}"
+    click: Discard Draft
+  - name: Confirm the discard
+    when: "${prDraft}"
+    optional: true
+    timeout: 5000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${prDraft}"
+    openApp: { title: Manage Purchase Requisitions - Professional }
+  - name: Saved requisitions only
+    optional: true
+    timeout: 5000
+    select: { label: Editing Status, value: All (Hiding Drafts) }
   - fill: { label: Search, value: "FIRST PR GR${grp}", enter: true }
   - click: Go
   - name: FIRST PR GR${grp} there already?
@@ -45,9 +91,11 @@ steps:
       Material: R124-${grp}
       Quantity | Quantity Requested: "20"
       Delivery Date: ${date(+10d)}
+  - unless: "${pr1Exists}"
+    click: { text: Account Assignment, role: tab }
   - name: Account assignment K / MAN-${grp} (K comes from the default settings)
     unless: "${pr1Exists}"
-    fill: { Cost Center: "MAN-${grp}", within: Account Assignment }
+    fill: { label: Cost Center, value: "MAN-${grp}" }
   - unless: "${pr1Exists}"
     click: Apply
   - unless: "${pr1Exists}"

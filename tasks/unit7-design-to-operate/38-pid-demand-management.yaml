@@ -2,38 +2,67 @@ id: IEE2E-38
 exercise: 38
 title: "Create PIR in Demand Management"
 tags: [unit7, pp, planning, gui]
+description: >
+  The initial stock receipt is not posted again when initialStockDoc was captured by an earlier run.
 steps:
   # Task 1: initial stock of the components (Post Goods Movement = MIGO)
-  - openApp: { title: Post Goods Movement }
-  - select: { combobox: 0, value: Goods Receipt }
-  - select: { combobox: 1, value: Other }
-  - fillCell: { row: 1, column: Mat. Short Text, value: "S11-${grp}" }
-  - fillCell: { row: 1, column: Qty in UnE, value: "500" }
-  - fillCell: { row: 1, column: SLoc, value: 101A }
-  - fillCell: { row: 1, column: Plnt, value: "1010" }
-  - fillCell: { row: 2, column: Mat. Short Text, value: "S12-${grp}" }
-  - fillCell: { row: 2, column: Qty in UnE, value: "500" }
-  - fillCell: { row: 2, column: SLoc, value: 101A }
-  - fillCell: { row: 2, column: Plnt, value: "1010" }
-  - fillCell: { row: 3, column: Mat. Short Text, value: "S13-${grp}" }
-  - fillCell: { row: 3, column: Qty in UnE, value: "500" }
-  - fillCell: { row: 3, column: SLoc, value: 101A }
-  - fillCell: { row: 3, column: Plnt, value: "1010" }
-  - fillCell: { row: 4, column: Mat. Short Text, value: "R14-${grp}" }
-  - fillCell: { row: 4, column: Qty in UnE, value: "500" }
-  - fillCell: { row: 4, column: SLoc, value: 101C }
-  - fillCell: { row: 4, column: Plnt, value: "1010" }
-  - fillCell: { row: 5, column: Mat. Short Text, value: "S15-${grp}" }
-  - fillCell: { row: 5, column: Qty in UnE, value: "1000" }
-  - fillCell: { row: 5, column: SLoc, value: 101B }
-  - fillCell: { row: 5, column: Plnt, value: "1010" }
-  - press: Enter
-  - name: Pick plant 1010 if asked for storage location / plant
+  - unless: "${initialStockDoc}"
+    openApp: { title: Post Goods Movement }
+  - unless: "${initialStockDoc}"
+    select: { combobox: 0, value: Goods Receipt }
+  - unless: "${initialStockDoc}"
+    select: { combobox: 1, value: Other }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 1, column: Mat. Short Text, value: "S11-${grp}" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 1, column: Qty in UnE, value: "500" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 1, column: SLoc, value: 101A }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 1, column: Plnt, value: "1010" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 2, column: Mat. Short Text, value: "S12-${grp}" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 2, column: Qty in UnE, value: "500" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 2, column: SLoc, value: 101A }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 2, column: Plnt, value: "1010" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 3, column: Mat. Short Text, value: "S13-${grp}" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 3, column: Qty in UnE, value: "500" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 3, column: SLoc, value: 101A }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 3, column: Plnt, value: "1010" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 4, column: Mat. Short Text, value: "R14-${grp}" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 4, column: Qty in UnE, value: "500" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 4, column: SLoc, value: 101C }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 4, column: Plnt, value: "1010" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 5, column: Mat. Short Text, value: "S15-${grp}" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 5, column: Qty in UnE, value: "1000" }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 5, column: SLoc, value: 101B }
+  - unless: "${initialStockDoc}"
+    fillCell: { row: 5, column: Plnt, value: "1010" }
+  - unless: "${initialStockDoc}"
+    press: Enter
+  - unless: "${initialStockDoc}"
+    name: Pick plant 1010 if asked for storage location / plant
     optional: true
     timeout: 3000
     selectRow: { contains: "1010", dialog: true }
-  - click: Post
-  - expectMessage:
+  - unless: "${initialStockDoc}"
+    click: Post
+  - unless: "${initialStockDoc}"
+    expectMessage:
       regex: "Material document \\d+ posted|\\d{9,10}"
       capture: { var: initialStockDoc, regex: "(\\d{9,10})" }
 
