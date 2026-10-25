@@ -52,10 +52,14 @@ const isUi5Select = (field) => field.evaluate((e) => e.classList.contains('sapMS
 // Open a dropdown and click the option; returns false when no option matches.
 async function pickOption(ctx, field, a) {
   await field.click();
+  const names = alternatives(a.value);
   const option = await locate(
     ctx.page,
-    [(s) => s.getByRole('option', { name: a.value, exact: true }), (s) => s.getByRole('option', { name: a.value })],
-    { timeout: 3000, what: `option "${a.value}"`, frame: a.frame }
+    [
+      ...names.map((n) => (s) => s.getByRole('option', { name: n, exact: true })),
+      ...names.map((n) => (s) => s.getByRole('option', { name: n })),
+    ],
+    { timeout: 3000, what: `option "${names.join('" / "')}"`, frame: a.frame }
   ).catch(() => null);
   if (option) await option.click();
   return !!option;
@@ -379,7 +383,7 @@ const actions = {
       await field.selectOption({ label: a.value }).catch(() => field.selectOption(a.value));
     } else if (!(await pickOption(ctx, field, a))) {
       // Editable ComboBox / input with suggestions: type the value and confirm.
-      await field.fill(a.value);
+      await field.fill(alternatives(a.value)[0]);
       await field.press('Enter');
     }
     await settle(ctx.page, ctx.stepTimeout);

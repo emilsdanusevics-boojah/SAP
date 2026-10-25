@@ -78,6 +78,9 @@ steps:
   - click: Go
   - name: FIRST PR GR${grp} there already?
     detect: { row: "FIRST PR GR${grp}", var: pr1Exists }
+  - name: Its number
+    when: "${pr1Exists}"
+    capture: { var: prNo1, from: cell, rowContains: "FIRST PR GR${grp}", column: [Purchase Requisition, Purch. Req.], regex: "(\\d{8,10})" }
   - unless: "${pr1Exists}"
     click: Create
   - unless: "${pr1Exists}"
@@ -93,21 +96,28 @@ steps:
       Delivery Date: ${date(+10d)}
   - unless: "${pr1Exists}"
     click: { text: Account Assignment, role: tab }
-  - name: Account assignment K / MAN-${grp} (K comes from the default settings)
+  - name: Open the account assignment line (the table shows no Cost Center column)
+    unless: "${pr1Exists}"
+    openRow: { row: 1, within: Account Assignment }
+  - name: Account assignment K / MAN-${grp} (K and the cost center come from the default settings)
     unless: "${pr1Exists}"
     fill: { label: Cost Center, value: "MAN-${grp}" }
-  - unless: "${pr1Exists}"
+  - name: Back to the item
+    unless: "${pr1Exists}"
+    click: Apply
+  - name: Back to the requisition
+    unless: "${pr1Exists}"
     click: Apply
   - unless: "${pr1Exists}"
     click: Create
-  - unless: "${pr1Exists}"
-    name: Confirm the delivery date dialog
+  - name: Confirm the delivery date dialog (only shown for some dates)
+    unless: "${pr1Exists}"
     optional: true
+    timeout: 5000
     click: { text: Create, dialog: true }
-  - unless: "${pr1Exists}"
-    expectMessage:
-      regex: "\\d{8,10}"
-      capture: { var: prNo1, regex: "(\\d{8,10})" }
+  - name: Requisition number (page title; the success toast disappears quickly)
+    unless: "${pr1Exists}"
+    capture: { var: prNo1, from: text, selector: body, regex: "(\\d{8,10})\\s+FIRST PR GR${grp}" }
 
   # 3. Change quantity to 50
   - openApp: { title: Manage Purchase Requisitions - Professional }
@@ -115,7 +125,7 @@ steps:
   - fill: { label: Search, value: "GR${grp}", enter: true }
   - openRow: FIRST PR GR${grp}
   - click: Edit
-  - openRow: R124-${grp}
+  - openRow: { row: 1, within: Items }
   - fill: { Quantity | Quantity Requested: "50" }
   - click: Apply
   - click: Save
@@ -128,6 +138,9 @@ steps:
   - click: Go
   - name: SECOND PR GR${grp} there already?
     detect: { row: "SECOND PR GR${grp}", var: pr2Exists }
+  - name: Its number
+    when: "${pr2Exists}"
+    capture: { var: prNo2, from: cell, rowContains: "SECOND PR GR${grp}", column: [Purchase Requisition, Purch. Req.], regex: "(\\d{8,10})" }
   - unless: "${pr2Exists}"
     fill: { label: Search, value: "GR${grp}", enter: true }
   - unless: "${pr2Exists}"
@@ -141,7 +154,7 @@ steps:
   - unless: "${pr2Exists}"
     fill: { Purchase Requisition Description | Purchase Requisition Descrip.: "SECOND PR GR${grp}" }
   - unless: "${pr2Exists}"
-    openRow: R124-${grp}
+    openRow: { row: 1, within: Items }
   - unless: "${pr2Exists}"
     clear: Account Assignment Category | Account Assignment Cat.
   - unless: "${pr2Exists}"
@@ -152,13 +165,14 @@ steps:
     click: Apply
   - unless: "${pr2Exists}"
     click: Create
-  - unless: "${pr2Exists}"
+  - name: Confirm the delivery date dialog (only shown for some dates)
+    unless: "${pr2Exists}"
     optional: true
+    timeout: 5000
     click: { text: Create, dialog: true }
-  - unless: "${pr2Exists}"
-    expectMessage:
-      regex: "\\d{8,10}"
-      capture: { var: prNo2, regex: "(\\d{8,10})" }
+  - name: Requisition number (page title; the success toast disappears quickly)
+    unless: "${pr2Exists}"
+    capture: { var: prNo2, from: text, selector: body, regex: "(\\d{8,10})\\s+SECOND PR GR${grp}" }
 
   # 5. Joule
   - manual: Open Joule and ask "Show purchase requisitions I have created"; open one and check it.

@@ -32,9 +32,14 @@ class State {
     this.pinnedApps = fs.existsSync(cfg.appsFile) ? YAML.parse(fs.readFileSync(cfg.appsFile, 'utf8')) || {} : {};
   }
 
+  // Writes only the values this run changed, on top of the file as it is now, so runs started in
+  // parallel do not overwrite each other's values.
   saveVars(vars) {
+    const changed = Object.keys(vars).filter((k) => vars[k] !== this.vars[k]);
     this.vars = { ...vars };
-    writeJson(this.varsFile, this.vars);
+    const onDisk = readJson(this.varsFile);
+    for (const k of changed) onDisk[k] = vars[k];
+    writeJson(this.varsFile, onDisk);
   }
 
   appHash(title) {
