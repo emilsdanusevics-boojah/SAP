@@ -3,21 +3,33 @@ exercise: 29
 title: "Post Goods Receipt and Analyze the Impact"
 tags: [unit6, mm, inventory]
 requires: [IEE2E-27]
+description: >
+  The goods receipt is posted once; with its material document known (grMatDoc) only the analysis runs.
 steps:
-  - openApp: { title: Post Goods Receipt for Purchasing Document }
-  - fill: { label: Purchasing Document, value: "${poNo}", enter: true }
-  - expectText: R124-${grp}
-  - optional: true
+  - unless: "${grMatDoc}"
+    openApp: { title: Post Goods Receipt for Purchasing Document }
+  - unless: "${grMatDoc}"
+    fill: { label: Purchasing Document, value: "${poNo}", enter: true }
+  - unless: "${grMatDoc}"
+    expectText: R124-${grp}
+  - unless: "${grMatDoc}"
+    optional: true
     select: { label: Printing, value: Individual Slip }
-  - fill: { Delivery Note: "DEL IEE2E ${grp}" }
-  - fillCell: { row: 1, column: Storage Location, value: 101C }
-  - optional: true
+  - unless: "${grMatDoc}"
+    fill: { Delivery Note: "DEL IEE2E ${grp}" }
+  - unless: "${grMatDoc}"
+    fillCell: { row: 1, column: Storage Location, value: 101C }
+  - unless: "${grMatDoc}"
+    optional: true
     fillCell: { row: 2, column: Storage Location, value: 101C }
-  - click: Post
-  - expectMessage:
+  - unless: "${grMatDoc}"
+    click: Post
+  - unless: "${grMatDoc}"
+    expectMessage:
       regex: "\\d{9,10}"
       capture: { var: grMatDoc, regex: "(\\d{9,10})" }
-  - optional: true
+  - unless: "${grMatDoc}"
+    optional: true
     click: { text: [OK, Ok], dialog: true }
 
   - openApp: { title: Material Documents Overview }

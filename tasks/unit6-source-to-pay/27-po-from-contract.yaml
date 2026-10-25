@@ -3,36 +3,60 @@ exercise: 27
 title: "Create Purchase Order with Reference to Contract"
 tags: [unit6, mm, purchasing]
 requires: [IEE2E-24, IEE2E-26]
+description: >
+  The purchase order is created once; with its number known (poNo) only the list check runs.
 steps:
-  - openApp: { title: Process Purchase Requisitions (V2) }
-  - addFilter: Material ID
-  - fill: { Material ID: "R124-${grp}" }
-  - click: Go
-  - expectText: ${prNo1}
-  - expectText: ${prNo2}
+  - unless: "${poNo}"
+    openApp: { title: Process Purchase Requisitions (V2) }
+  - unless: "${poNo}"
+    addFilter: Material ID
+  - unless: "${poNo}"
+    fill: { Material ID: "R124-${grp}" }
+  - unless: "${poNo}"
+    click: Go
+  - unless: "${poNo}"
+    expectText: ${prNo1}
+  - unless: "${poNo}"
+    expectText: ${prNo2}
 
-  - clickCell: { rowContains: "${prNo1}", column: Assign Source of Supply }
-  - selectRow: { contains: "${contractNo}", dialog: true }
-  - click: { text: Assign, dialog: true }
-  - optional: true
+  - unless: "${poNo}"
+    clickCell: { rowContains: "${prNo1}", column: Assign Source of Supply }
+  - unless: "${poNo}"
+    selectRow: { contains: "${contractNo}", dialog: true }
+  - unless: "${poNo}"
+    click: { text: Assign, dialog: true }
+  - unless: "${poNo}"
+    optional: true
     click: { text: [OK, Ok], dialog: true }
-  - clickCell: { rowContains: "${prNo2}", column: Assign Source of Supply }
-  - selectRow: { contains: "${contractNo}", dialog: true }
-  - click: { text: Assign, dialog: true }
-  - optional: true
+  - unless: "${poNo}"
+    clickCell: { rowContains: "${prNo2}", column: Assign Source of Supply }
+  - unless: "${poNo}"
+    selectRow: { contains: "${contractNo}", dialog: true }
+  - unless: "${poNo}"
+    click: { text: Assign, dialog: true }
+  - unless: "${poNo}"
+    optional: true
     click: { text: [OK, Ok], dialog: true }
-  - click: Go
-  - expectText: IEE2E-${grp}
+  - unless: "${poNo}"
+    click: Go
+  - unless: "${poNo}"
+    expectText: IEE2E-${grp}
 
-  - selectRow: { contains: ["${prNo1}", "${prNo2}"] }
-  - click: Create Purchase Order
-  - name: Confirm warnings
+  - unless: "${poNo}"
+    selectRow: { contains: ["${prNo1}", "${prNo2}"] }
+  - unless: "${poNo}"
+    click: Create Purchase Order
+  - unless: "${poNo}"
+    name: Confirm warnings
     optional: true
     timeout: 4000
     click: { text: [OK, Ok, Continue], dialog: true }
-  - select: { label: Purchase Order Type, value: Standard PO }
-  - click: Order
-  - expectMessage:
+  - unless: "${poNo}"
+    select: { label: Purchase Order Type, value: Standard PO }
+  - unless: "${poNo}"
+    click: Order
+  - unless: "${poNo}"
+    expectMessage:
       regex: "45\\d{8}"
       capture: { var: poNo, regex: "(45\\d{8})" }
 

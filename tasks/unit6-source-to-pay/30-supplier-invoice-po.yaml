@@ -3,28 +3,42 @@ exercise: 30
 title: "Post Invoice and Analyze Financial Impact"
 tags: [unit6, mm, invoice]
 requires: [IEE2E-29]
+description: >
+  The invoice is posted once; with its number known (poInvoice) only the analysis runs.
 steps:
-  - openApp: { title: Create Supplier Invoice }
-  - select: { label: Transaction, value: Invoice }
-  - fill:
+  - unless: "${poInvoice}"
+    openApp: { title: Create Supplier Invoice }
+  - unless: "${poInvoice}"
+    select: { label: Transaction, value: Invoice }
+  - unless: "${poInvoice}"
+    fill:
       Company Code: "1010"
       Reference: IEE2E-INV-${grp}
       Invoice Date: ${today}
       Posting Date: ${today}
       Gross Invoice Amount: ${num(2612.50)}
       Currency: EUR
-  - select: { label: Invoicing Party, value: "IEE2E-${grp}" }
-  - click: { text: PO References, role: tab }
-  - fill: { label: Purchase Order, value: "${poNo}", enter: true }
-  - fill: { Tax Code: 1I }
-  - name: Balance must be 0 (if not, the guide says adjust the gross amount)
+  - unless: "${poInvoice}"
+    select: { label: Invoicing Party, value: "IEE2E-${grp}" }
+  - unless: "${poInvoice}"
+    click: { text: PO References, role: tab }
+  - unless: "${poInvoice}"
+    fill: { label: Purchase Order, value: "${poNo}", enter: true }
+  - unless: "${poInvoice}"
+    fill: { Tax Code: 1I }
+  - unless: "${poInvoice}"
+    name: Balance must be 0 (if not, the guide says adjust the gross amount)
     expectText: "0,00"
-  - click: Simulate
-  - click: Post
-  - expectMessage:
+  - unless: "${poInvoice}"
+    click: Simulate
+  - unless: "${poInvoice}"
+    click: Post
+  - unless: "${poInvoice}"
+    expectMessage:
       regex: "created|posted"
       capture: { var: poInvoice, regex: "(\\d{9,10})" }
-  - click: { text: "No", dialog: true }
+  - unless: "${poInvoice}"
+    click: { text: "No", dialog: true }
 
   - openApp: { title: Supplier Invoice List }
   - fill: { Invoicing Party: "IEE2E-${grp}" }
