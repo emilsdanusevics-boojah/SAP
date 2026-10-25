@@ -60,9 +60,11 @@ steps:
       Planned Delivery Time: "15"
       Order Currency: EUR
       Payment Terms: "0001"
-      Incoterms: FH
+  - name: Incoterms FH (the label also matches the field group title, which sits above Incoterms Version)
+    unless: "${flvn01Exists}"
+    fill: { selector: "input[id*='FieldGroup::Incoterms::'][id$='-input-inner']:not([id*='Version']):not([id*='Location'])", value: FH }
   - unless: "${flvn01Exists}"
-    check: Automatic Purchase Order
+    check: Automatic Purchasing Order
   - unless: "${flvn01Exists}"
     click: Apply
   - unless: "${flvn01Exists}"
@@ -73,4 +75,5 @@ steps:
     expectNoError: true
   - name: Saved (display mode)
     expectText: { text: Edit, exact: true }
-  - expectText: FLVN01
+  - click: { text: Roles, role: tab }
+  - expectText: { text: FLVN01, within: Roles }

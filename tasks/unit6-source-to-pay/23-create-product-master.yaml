@@ -23,7 +23,12 @@ steps:
   - unless: "${matExists}"
     press: Enter
   - unless: "${matExists}"
-    selectRow: { contains: [Basic Data 1, Purchasing, Accounting 1, Costing 2], dialog: true }
+    selectRow: { contains: [Basic Data 1, Purchasing], dialog: true }
+  - name: Scroll the view list (the GUI renders only the visible rows)
+    unless: "${matExists}"
+    press: PageDown
+  - unless: "${matExists}"
+    selectRow: { contains: [Accounting 1, Costing 2], dialog: true }
   - unless: "${matExists}"
     click: { text: [Org. Levels, Org. Levels (F6)], dialog: true }
   - unless: "${matExists}"

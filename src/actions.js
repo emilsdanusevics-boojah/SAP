@@ -77,6 +77,7 @@ async function typeInto(ctx, field, { value, enter, type }) {
 
 async function fillOne(ctx, a) {
   const field = await findField(ctx, a);
+  if (process.env.DEBUG_FIELD) ctx.log.info(`    [field] ${a.label} -> ${await field.evaluate((e) => `${e.tagName}#${e.id} labelledby=${e.getAttribute('aria-labelledby')}`).catch(() => '?')}`);
   if (await isUi5Select(field)) {
     const shown = (await field.innerText().catch(() => '')).trim();
     if (shown && shown.startsWith(String(a.value))) return;
