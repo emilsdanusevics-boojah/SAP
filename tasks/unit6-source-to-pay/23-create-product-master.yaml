@@ -34,7 +34,8 @@ steps:
   - unless: "${matExists}"
     fill: { label: Plant, value: "1010", dialog: true }
   - unless: "${matExists}"
-    fill: { label: Plant, index: 1, value: "1010", dialog: true }
+    name: Copy-from plant (an unlabelled field next to Plant)
+    fill: { selector: "input:not([type='checkbox'])", index: 1, value: "1010", dialog: true }
   - unless: "${matExists}"
     press: Enter
   - unless: "${matExists}"
@@ -55,16 +56,36 @@ steps:
   - unless: "${matExists}"
     name: Confirm the purchasing value key warning
     press: Enter
+  - name: Accept the warning again
+    unless: "${matExists}"
+    press: Enter
+  - name: Open the tab overflow menu (…)
+    unless: "${matExists}"
+    click: { selector: "[title*='More' i], [aria-label*='More' i]", index: -1 }
   - unless: "${matExists}"
-    click: { text: Accounting 1, role: tab }
+    click: { text: Accounting 1, index: -1 }
+  - name: The warning can block the first switch - accept it and switch again
+    unless: "${matExists}"
+    press: Enter
+  - unless: "${matExists}"
+    optional: true
+    timeout: 5000
+    click: { selector: "[title*='More' i], [aria-label*='More' i]", index: -1 }
+  - unless: "${matExists}"
+    optional: true
+    timeout: 5000
+    click: { text: Accounting 1, index: -1 }
   - unless: "${matExists}"
     fill:
       Price Control: S
       Standard Price: "10"
   - unless: "${matExists}"
     press: Enter
+  - name: Open the tab overflow menu (…)
+    unless: "${matExists}"
+    click: { selector: "[title*='More' i], [aria-label*='More' i]", index: -1 }
   - unless: "${matExists}"
-    click: { text: Costing 2, role: tab }
+    click: { text: Costing 2, index: -1 }
   - unless: "${matExists}"
     click: Save
   - unless: "${matExists}"

@@ -9,6 +9,8 @@ steps:
       Plant: "1010"
       Work Center: T-A${grp}
   - press: Enter
+  - name: Basic Data (the transaction may open on another tab)
+    click: { text: Basic Data, role: tab }
   - capture: { var: wc_category, from: field, label: Work Center Category }
   - capture: { var: wc_usage, from: field, label: Usage }
   - capture: { var: wc_stdValueKey, from: field, label: Standard Value Key }

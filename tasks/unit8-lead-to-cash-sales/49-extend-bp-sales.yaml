@@ -3,48 +3,122 @@ exercise: 49
 title: "Extend BP for Sales (FLCU00 + FLCU01)"
 tags: [unit8, sd, master-data]
 requires: [IEE2E-07]
+description: >
+  Adds roles FLCU00 (company code 1010) and FLCU01 (sales area 1010/10/00) to IEE2E-###. A role that
+  exists already is not added again; a draft left by an earlier attempt is discarded first.
+vars:
+  bp: IEE2E-${grp}
 steps:
   - openApp: { title: Manage Business Partner Master Data }
-  - fill: { Business Partner: "IEE2E-${grp}" }
-  - click: Go
-  - openRow: IEE2E-${grp}
-  - click: Edit
 
-  # Customer (Fin. Accounting)
+  # --- Discard a draft left by an earlier attempt ---
+  - select: { label: Editing Status, value: Own Draft }
+  - fill: { label: Search, value: "${bp}", enter: true }
+  - name: Draft of ${bp} left over?
+    detect: { row: "${bp}", var: bpDraft }
+  - when: "${bpDraft}"
+    openRow: "${bp}"
+  - when: "${bpDraft}"
+    click: Discard Draft
+  - name: Confirm the discard (new-object drafts only)
+    when: "${bpDraft}"
+    optional: true
+    timeout: 4000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${bpDraft}"
+    home: true
+  - when: "${bpDraft}"
+    openApp: { title: Manage Business Partner Master Data }
+
+  - select: { label: Editing Status, value: All }
+  - fill: { label: Search, value: "${bp}", enter: true }
+  - openRow: "(${bp})"
   - click: { text: Roles, role: tab }
-  - click: { text: Create, within: Roles }
-  - fillCell: { within: Roles, row: -1, column: BP Role, value: FLCU00 }
-  - openRow: FLCU00
-  - click: { text: Company Codes | Company Code, role: tab }
-  - click: { text: Create, within: Company Codes }
-  - fill:
+  - name: Role FLCU00 there already? (readable in display mode)
+    detect: { row: FLCU00, var: flcu00Exists, within: Roles, timeout: 10000 }
+  - name: Role FLCU01 there already?
+    detect: { row: FLCU01, var: flcu01Exists, within: Roles, timeout: 3000 }
+  - set: { bpChanged: "" }
+
+  # --- Customer (Fin. Accounting) ---
+  - unless: "${flcu00Exists}"
+    set: { bpChanged: "yes" }
+  - unless: "${flcu00Exists}"
+    click: Edit
+  - unless: "${flcu00Exists}"
+    click: { text: Roles, role: tab }
+  - unless: "${flcu00Exists}"
+    click: { text: Create, within: Roles }
+  - name: Role FLCU00 in the new row (inserted at the top)
+    unless: "${flcu00Exists}"
+    fillCell: { within: Roles, row: 1, column: Business Partner Role, value: FLCU00 }
+  - unless: "${flcu00Exists}"
+    openRow: { row: 1, within: Roles }
+  - unless: "${flcu00Exists}"
+    click: { text: Company Codes, role: tab }
+  - unless: "${flcu00Exists}"
+    click: { text: Create, within: Company Codes }
+  - unless: "${flcu00Exists}"
+    fill:
       Company Code: "1010"
       Reconciliation Account: "12100000"
       Sort Key: "001"
       Payment Terms: "0001"
-  - click: Apply
-  - click: Apply
+  - unless: "${flcu00Exists}"
+    click: Apply
+  - unless: "${flcu00Exists}"
+    click: Apply
 
-  # Customer (Sales)
-  - click: { text: Roles, role: tab }
-  - click: { text: Create, within: Roles }
-  - fillCell: { within: Roles, row: -1, column: BP Role, value: FLCU01 }
-  - openRow: FLCU01
-  - click: { text: Sales Areas, role: tab }
-  - click: { text: Create, within: Sales Areas }
-  - fill:
+  # --- Customer (Sales) ---
+  - name: Edit (unless already editing)
+    unless: "${flcu01Exists}"
+    optional: true
+    timeout: 5000
+    click: Edit
+  - unless: "${flcu01Exists}"
+    set: { bpChanged: "yes" }
+  - unless: "${flcu01Exists}"
+    click: { text: Roles, role: tab }
+  - unless: "${flcu01Exists}"
+    click: { text: Create, within: Roles }
+  - name: Role FLCU01 in the new row (inserted at the top)
+    unless: "${flcu01Exists}"
+    fillCell: { within: Roles, row: 1, column: Business Partner Role, value: FLCU01 }
+  - unless: "${flcu01Exists}"
+    openRow: { row: 1, within: Roles }
+  - unless: "${flcu01Exists}"
+    click: { text: Sales Areas, role: tab }
+  - unless: "${flcu01Exists}"
+    click: { text: Create, within: Sales Areas }
+  - unless: "${flcu01Exists}"
+    fill:
       Sales Organization: "1010"
       Distribution Channel: "10"
       Division: "00"
       Currency: EUR
-      Incoterms: FH
       Payment Terms: "0001"
       Shipping Conditions: "00"
       Customer Pricing Procedure | Cust. Pric. Procedure: "01"
-  - click: Apply
-  - click: { text: Taxes, role: tab }
-  - fillCell: { rowContains: Germany, column: Tax Classification, value: "1" }
-  - click: Apply
-  - click: Apply
-  - click: Save
-  - expectNoError: true
+  - name: Incoterms FH (by id; the label also matches the Incoterms field group title)
+    unless: "${flcu01Exists}"
+    fill: { selector: "input[id*='Incoterms'][id$='-input-inner']:not([id*='Version']):not([id*='Location'])", value: FH }
+  - unless: "${flcu01Exists}"
+    click: Apply
+  - unless: "${flcu01Exists}"
+    click: { text: Taxes, role: tab }
+  - unless: "${flcu01Exists}"
+    fillCell: { rowContains: Germany, column: Tax Classification, value: "1" }
+  - unless: "${flcu01Exists}"
+    click: Apply
+  - unless: "${flcu01Exists}"
+    click: Apply
+
+  - when: "${bpChanged}"
+    click: Save
+  - when: "${bpChanged}"
+    expectNoError: true
+  - name: Saved (display mode)
+    expectText: { text: Edit, exact: true }
+  - click: { text: Roles, role: tab }
+  - expectText: { text: FLCU00, within: Roles }
+  - expectText: { text: FLCU01, within: Roles }

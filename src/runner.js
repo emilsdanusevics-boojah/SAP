@@ -124,6 +124,14 @@ function skippedSteps(task, from) {
   });
 }
 
+async function leaveGui(page, cfg) {
+  const inGui = page.frames().some((f) => /\/sap\/bc\/gui\//.test(f.url()));
+  if (!inGui) return;
+  // In-app navigation lets the launchpad exit the GUI app (it ends the GUI session).
+  await page.evaluate(() => { window.location.hash = '#Shell-home'; }).catch(() => {});
+  await page.waitForTimeout(5000);
+}
+
 const truthy = (v) => !['', '0', 'false', 'no'].includes(String(v ?? '').trim().toLowerCase());
 
 // A variable nothing has set yet counts as empty in a condition.
@@ -269,6 +277,7 @@ async function runAll(tasks, cfg, cliVars) {
     for (const task of tasks) {
       if (cfg.trace) await context.tracing.startChunk({ title: task.id });
       const res = await runTask(task, page, cfg, shared);
+      await leaveGui(page, cfg);
       if (cfg.trace) {
         res.trace = path.join(cfg.outDir, `${task.id}-trace.zip`);
         await context.tracing.stopChunk({ path: res.trace });
@@ -284,6 +293,9 @@ async function runAll(tasks, cfg, cliVars) {
     log.fail(`\nRun aborted: ${err.message}`);
     await page.screenshot({ path: path.join(cfg.outDir, 'fatal.png'), fullPage: true }).catch(() => {});
   } finally {
+    // Leave classic GUI transactions through the launchpad so their sessions are closed (and their
+    // locks released); closing the browser while one is open leaves an orphaned, locking session.
+    await leaveGui(page, cfg);
     if (cfg.trace) await context.tracing.stop().catch(() => {});
     await browser.close();
   }

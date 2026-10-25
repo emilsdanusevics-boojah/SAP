@@ -273,6 +273,13 @@ async function tickRow(row) {
   // Grid table: the row owns its selector cell by id (aria-owns "...-rowsel0") without containing it.
   const owned = await ownedCell(row, /-rowsel\d+$/);
   if (owned) return owned.click();
+  // Classic GUI table: the selector sits in the fixed left part, "<id>-mrss-cont-left-Row-<n>"
+  // next to the content row "<id>-mrss-cont-none-Row-<n>".
+  const rowId = (await row.getAttribute('id').catch(() => null)) || '';
+  if (/-mrss-cont-none-Row-\d+$/.test(rowId)) {
+    const left = row.locator('xpath=ancestor::*[last()]').locator(`[id="${rowId.replace('-cont-none-', '-cont-left-')}"] td`).first();
+    if ((await left.count()) > 0) return left.click();
+  }
   const idx = await row.getAttribute('data-sap-ui-rowindex').catch(() => null);
   if (idx !== null) {
     const cell = row.page().locator(`.sapUiTableRowSelectionCell[data-sap-ui-rowindex="${idx}"]`).first();
