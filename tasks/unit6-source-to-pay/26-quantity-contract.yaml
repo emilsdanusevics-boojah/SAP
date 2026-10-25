@@ -3,22 +3,40 @@ exercise: 26
 title: "Create Quantity Contract and Check Sources of Supply"
 tags: [unit6, mm, sourcing]
 requires: [IEE2E-25]
+description: >
+  The contract is created from the awarded quotation once; when its number is known already
+  (contractNo) only the sources of supply are checked.
 steps:
-  - openApp: { title: Manage Supplier Quotations }
-  - fill: { RFQ: "${rfqNo}" }
-  - click: Go
-  - openRow: Awarded
-  - click: Follow-On Document
-  - click: Create Purchase Contract
-  - optional: true
-    fill: { Purchase Contract Name: "Quantity Contract ${grp}" }
-  - fillCell: { within: Items, row: 1, column: Target Quantity, value: "1000" }
-  - click: Create
-  - expectMessage:
-      regex: "\\d{9,10}"
-      capture: { var: contractNo, regex: "(\\d{9,10})" }
+  - unless: "${contractNo}"
+    openApp: { title: Manage Supplier Quotations }
+  - unless: "${contractNo}"
+    fill: { label: Search, value: "${rfqNo}", enter: true }
+  - unless: "${contractNo}"
+    click: Go
+  - unless: "${contractNo}"
+    openRow: Awarded
+  - unless: "${contractNo}"
+    click: [Follow-On Document, Create Follow-On Document]
+  - unless: "${contractNo}"
+    optional: true
+    timeout: 5000
+    click: Create Purchase Contract
+  - unless: "${contractNo}"
+    screenshot: contract-draft
+  - unless: "${contractNo}"
+    optional: true
+    timeout: 5000
+    fill: { Purchase Contract Name | Contract Name: "Quantity Contract ${grp}" }
+  - unless: "${contractNo}"
+    fillCell: { within: Items, row: 1, column: Target Quantity, value: "1000" }
+  - unless: "${contractNo}"
+    click: Create
+  - name: Contract number (from the message, or the page title once the message is gone)
+    unless: "${contractNo}"
+    capture: { var: contractNo, from: text, selector: body, regex: "(46\\d{8})" }
 
   - openApp: { title: Manage Sources of Supply }
   - fill: { Material: "R124-${grp}" }
   - click: Go
+  - screenshot: sources-of-supply
   - expectText: ${contractNo}

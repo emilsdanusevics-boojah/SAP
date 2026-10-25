@@ -78,8 +78,9 @@ steps:
     fillCell: { within: Bidders, row: 1, column: Supplier, value: "IEE2E-${grp}" }
   - unless: "${rfqExists}"
     click: { text: Create, within: Bidders }
-  - unless: "${rfqExists}"
-    fillCell: { within: Bidders, row: 2, column: Supplier, value: "10300002" }
+  - name: Second bidder (new rows are inserted at the top)
+    unless: "${rfqExists}"
+    fillCell: { within: Bidders, row: 1, column: Supplier, value: "10300002" }
   - unless: "${rfqExists}"
     click: { text: Create, index: -1 }
   - unless: "${rfqExists}"
