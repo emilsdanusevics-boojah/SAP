@@ -9,8 +9,8 @@ steps:
   - screenshot: stock-before
 
   - openApp: { title: Post Goods Movement }
-  - select: { combobox: 0, value: Goods Receipt }
-  - select: { combobox: 1, value: Order }
+  - select: { combobox: 0, value: Goods Receipt, frame: app }
+  - select: { combobox: 1, value: Order, frame: app }
   - fill: { label: Order, value: "${prodOrder}", enter: true }
   - check: Item OK | OK
   - click: Check

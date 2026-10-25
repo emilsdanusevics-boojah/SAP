@@ -372,7 +372,8 @@ const actions = {
   async select(ctx, a) {
     const field =
       a.combobox !== undefined
-        ? await locate(ctx.page, [(s) => s.getByRole('combobox')], {
+        ? // Classic GUI dropdowns are inputs of control type CB without an ARIA role.
+          await locate(ctx.page, [(s) => s.locator('[role="combobox"], input[ct="CB"]')], {
             timeout: ctx.stepTimeout,
             what: `dropdown #${a.combobox}`,
             ...scopeOf({ ...a, index: a.combobox }),

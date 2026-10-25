@@ -5,8 +5,8 @@ tags: [unit8, sd, inventory, standalone, gui]
 skip: Only for a standalone Sales workshop - Unit 7 already produces 100 PC of F1-###. Run with --grep IEE2E-48 to include.
 steps:
   - openApp: { title: Post Goods Movement }
-  - select: { combobox: 0, value: Goods Receipt }
-  - select: { combobox: 1, value: Other }
+  - select: { combobox: 0, value: Goods Receipt, frame: app }
+  - select: { combobox: 1, value: Other, frame: app }
   - fill: { label: Movement Type, value: "561" }
   - fillCell: { row: 1, column: Mat. Short Text | Material, value: "F1-${grp}" }
   - fillCell: { row: 1, column: Qty in UnE | Quantity, value: "100" }

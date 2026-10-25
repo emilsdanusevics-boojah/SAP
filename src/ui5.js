@@ -218,7 +218,7 @@ function rowBuilders(contains) {
 async function waitForUI5(target, timeout) {
   try {
     await target.waitForFunction(
-      () => {
+      (call) => {
         const w = window;
         const domIdle = () =>
           document.readyState === 'complete' &&
@@ -237,9 +237,21 @@ async function waitForUI5(target, timeout) {
         }
         if (w.__sapTesterWaiter === null) return false; // still loading
         if (w.__sapTesterWaiter === false) return domIdle();
-        return !w.__sapTesterWaiter.hasToWait() && domIdle();
+        if (!domIdle()) {
+          w.__sapTesterIdleSince = 0;
+          return false;
+        }
+        if (!w.__sapTesterWaiter.hasToWait()) return true;
+        // Some apps keep the auto-waiter busy with background polling although nothing is
+        // loading; accept a page that has shown no busy indicator for a few seconds.
+        if (w.__sapTesterIdleCall !== call) {
+          w.__sapTesterIdleCall = call;
+          w.__sapTesterIdleSince = 0;
+        }
+        w.__sapTesterIdleSince = w.__sapTesterIdleSince || Date.now();
+        return Date.now() - w.__sapTesterIdleSince > 4000;
       },
-      null,
+      Date.now() + Math.random(),
       { timeout, polling: 250 }
     );
   } catch {

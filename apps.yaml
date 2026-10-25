@@ -9,3 +9,5 @@
 # Two tiles share this title; both open the classic app (slowly, via the search).
 Manage Cost Center Groups: CostCenterGroup-manageCostCenterGroup
 Manage Cost Rates - Plan: ActivityType-managePlanCostRates
+# The search for "Change Material" lists "Change Material Serial Number" first.
+Change Material: Material-change?sap-ui-tech-hint=GUI
