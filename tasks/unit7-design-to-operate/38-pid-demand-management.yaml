@@ -22,7 +22,7 @@ steps:
   - unless: "${initialStockDoc}"
     click: { text: Where, role: tab, frame: app }
   - unless: "${initialStockDoc}"
-    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app }
+    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app, index: -1 }
   - unless: "${initialStockDoc}"
     press: Enter
   - name: Next item
@@ -39,7 +39,7 @@ steps:
   - unless: "${initialStockDoc}"
     click: { text: Where, role: tab, frame: app }
   - unless: "${initialStockDoc}"
-    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app }
+    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app, index: -1 }
   - unless: "${initialStockDoc}"
     press: Enter
   - name: Next item
@@ -56,7 +56,7 @@ steps:
   - unless: "${initialStockDoc}"
     click: { text: Where, role: tab, frame: app }
   - unless: "${initialStockDoc}"
-    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app }
+    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app, index: -1 }
   - unless: "${initialStockDoc}"
     press: Enter
   - name: Next item
@@ -73,7 +73,7 @@ steps:
   - unless: "${initialStockDoc}"
     click: { text: Where, role: tab, frame: app }
   - unless: "${initialStockDoc}"
-    fill: { fields: { Plant: "1010", Storage Location: 101C }, frame: app }
+    fill: { fields: { Plant: "1010", Storage Location: 101C }, frame: app, index: -1 }
   - unless: "${initialStockDoc}"
     press: Enter
   - name: Next item
@@ -90,7 +90,7 @@ steps:
   - unless: "${initialStockDoc}"
     click: { text: Where, role: tab, frame: app }
   - unless: "${initialStockDoc}"
-    fill: { fields: { Plant: "1010", Storage Location: 101B }, frame: app }
+    fill: { fields: { Plant: "1010", Storage Location: 101B }, frame: app, index: -1 }
   - unless: "${initialStockDoc}"
     press: Enter
   - unless: "${initialStockDoc}"

@@ -102,7 +102,8 @@ steps:
     optional: true
     timeout: 10000
     click: { text: Close, dialog: true }
-  - expectText: Published
+  - name: Published (or still in the approval workflow that publishes it)
+    expectText: { text: [Published, In Approval] }
 
   # 2. Quotations from both bidders (a bidder that has one already is skipped)
   - openApp: { title: Manage RFQs }
