@@ -3,27 +3,74 @@ exercise: 22
 title: "Extend Business Partner for Purchasing"
 tags: [unit6, mm, master-data]
 requires: [IEE2E-07]
+description: >
+  Adds role FLVN01 (Supplier) with purchasing organization 1010 to IEE2E-###. Nothing is added
+  when the role exists already; a draft left by an earlier attempt is discarded first.
+vars:
+  bp: IEE2E-${grp}
 steps:
   - openApp: { title: Manage Business Partner Master Data }
-  - fill: { Business Partner: "IEE2E-${grp}" }
-  - click: Go
-  - openRow: IEE2E-${grp}
-  - click: Edit
+
+  # --- Discard a draft left by an earlier attempt ---
+  - select: { label: Editing Status, value: Own Draft }
+  - fill: { label: Search, value: "${bp}", enter: true }
+  - name: Draft of ${bp} left over?
+    detect: { row: "${bp}", var: bpDraft }
+  - when: "${bpDraft}"
+    openRow: "${bp}"
+  - when: "${bpDraft}"
+    click: Discard Draft
+  - name: Confirm the discard (new-object drafts only)
+    when: "${bpDraft}"
+    optional: true
+    timeout: 4000
+    click: { text: Discard, role: button, index: -1 }
+  - when: "${bpDraft}"
+    home: true
+  - when: "${bpDraft}"
+    openApp: { title: Manage Business Partner Master Data }
+
+  - select: { label: Editing Status, value: All }
+  - fill: { label: Search, value: "${bp}", enter: true }
+  - openRow: "(${bp})"
   - click: { text: Roles, role: tab }
-  - click: { text: Create, within: Roles }
-  - fillCell: { within: Roles, row: -1, column: BP Role, value: FLVN01 }
-  - openRow: FLVN01
-  - click: { text: Purchasing Organizations, role: tab }
-  - click: { text: Create, within: Purchasing Organizations }
-  - fill:
+  - name: Role FLVN01 there already? (readable in display mode)
+    detect: { row: FLVN01, var: flvn01Exists, within: Roles, timeout: 10000 }
+
+  - unless: "${flvn01Exists}"
+    click: Edit
+  - unless: "${flvn01Exists}"
+    click: { text: Roles, role: tab }
+  - unless: "${flvn01Exists}"
+    click: { text: Create, within: Roles }
+  - name: Role FLVN01 in the new row (inserted at the top)
+    unless: "${flvn01Exists}"
+    fillCell: { within: Roles, row: 1, column: Business Partner Role, value: FLVN01 }
+  - name: Open the new role's details (>)
+    unless: "${flvn01Exists}"
+    openRow: { row: 1, within: Roles }
+  - unless: "${flvn01Exists}"
+    click: { text: Purchasing Organizations, role: tab }
+  - unless: "${flvn01Exists}"
+    click: { text: Create, within: Purchasing Organizations }
+  - unless: "${flvn01Exists}"
+    fill:
       Purchasing Organization: "1010"
       Purchasing Group: "000"
       Planned Delivery Time: "15"
       Order Currency: EUR
       Payment Terms: "0001"
       Incoterms: FH
-  - check: Automatic Purchase Order
-  - click: Apply
-  - click: Apply
-  - click: Save
-  - expectNoError: true
+  - unless: "${flvn01Exists}"
+    check: Automatic Purchase Order
+  - unless: "${flvn01Exists}"
+    click: Apply
+  - unless: "${flvn01Exists}"
+    click: Apply
+  - unless: "${flvn01Exists}"
+    click: Save
+  - unless: "${flvn01Exists}"
+    expectNoError: true
+  - name: Saved (display mode)
+    expectText: { text: Edit, exact: true }
+  - expectText: FLVN01

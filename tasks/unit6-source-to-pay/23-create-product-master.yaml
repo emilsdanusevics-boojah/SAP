@@ -2,37 +2,65 @@ id: IEE2E-23
 exercise: 23
 title: "Create Product Master Record R124-### (lock)"
 tags: [unit6, mm, master-data, gui]
-description: Create Material is a classic GUI transaction (MM01) shown inside the launchpad.
+description: >
+  Create Material is a classic GUI transaction (MM01) shown inside the launchpad; there is no
+  Industry Sector field. R124-### is copied from R122-### and not created again when it exists.
 steps:
-  - openApp: { title: Create Material }
-  - fill:
-      Material: R124-${grp}
-      Industry Sector: M
-      Material Type: ROH
-  - fill: { label: Material, index: 1, value: "R122-${grp}" }
-  - press: Enter
-  - selectRow: { contains: [Basic Data 1, Purchasing, Accounting 1, Costing 2], dialog: true }
-  - click: { text: [Org. Levels, Org. Levels (F6)], dialog: true }
-  - fill: { label: Plant, value: "1010", dialog: true }
-  - fill: { label: Plant, index: 1, value: "1010", dialog: true }
-  - press: Enter
-  - fill:
+  - openApp: { title: Manage Product Master Data }
+  - fill: { label: Search, value: "R124-${grp}", enter: true }
+  - click: Go
+  - name: R124-${grp} there already?
+    detect: { row: "R124-${grp}", var: matExists }
+
+  - unless: "${matExists}"
+    openApp: { title: Create Material }
+  - unless: "${matExists}"
+    fill: { label: Material, value: "R124-${grp}" }
+  - unless: "${matExists}"
+    select: { label: Material Type, value: ROH }
+  - unless: "${matExists}"
+    fill: { label: Material, index: 1, value: "R122-${grp}" }
+  - unless: "${matExists}"
+    press: Enter
+  - unless: "${matExists}"
+    selectRow: { contains: [Basic Data 1, Purchasing, Accounting 1, Costing 2], dialog: true }
+  - unless: "${matExists}"
+    click: { text: [Org. Levels, Org. Levels (F6)], dialog: true }
+  - unless: "${matExists}"
+    fill: { label: Plant, value: "1010", dialog: true }
+  - unless: "${matExists}"
+    fill: { label: Plant, index: 1, value: "1010", dialog: true }
+  - unless: "${matExists}"
+    press: Enter
+  - unless: "${matExists}"
+    fill:
       fields:
         Descr. | Material Description: Lock IEE2E-${grp}
         Gross Weight: "500"
         Weight unit | Unit of Weight: g
         Net Weight: "500"
-  - press: Enter
-  - click: { text: Purchasing, role: tab }
-  - fill: { Purchasing Group: "000" }
-  - press: Enter
-  - name: Confirm the purchasing value key warning
+  - unless: "${matExists}"
     press: Enter
-  - click: { text: Accounting 1, role: tab }
-  - fill:
+  - unless: "${matExists}"
+    click: { text: Purchasing, role: tab }
+  - unless: "${matExists}"
+    fill: { Purchasing Group: "000" }
+  - unless: "${matExists}"
+    press: Enter
+  - unless: "${matExists}"
+    name: Confirm the purchasing value key warning
+    press: Enter
+  - unless: "${matExists}"
+    click: { text: Accounting 1, role: tab }
+  - unless: "${matExists}"
+    fill:
       Price Control: S
       Standard Price: "10"
-  - press: Enter
-  - click: { text: Costing 2, role: tab }
-  - click: Save
-  - expectMessage: { contains: created }
+  - unless: "${matExists}"
+    press: Enter
+  - unless: "${matExists}"
+    click: { text: Costing 2, role: tab }
+  - unless: "${matExists}"
+    click: Save
+  - unless: "${matExists}"
+    expectMessage: { contains: created }
