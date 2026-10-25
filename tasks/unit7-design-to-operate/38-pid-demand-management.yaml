@@ -12,53 +12,87 @@ steps:
     select: { combobox: 0, value: Goods Receipt, frame: app }
   - unless: "${initialStockDoc}"
     select: { combobox: 1, value: Other, frame: app }
+  # The item overview is read-only here; each item is entered in the detail tabs below it.
   - unless: "${initialStockDoc}"
-    fillCell: { row: 1, column: Mat. Short Text, value: "S11-${grp}" }
+    fill: { label: Material, value: "S11-${grp}", enter: true, frame: app }
   - unless: "${initialStockDoc}"
-    fillCell: { row: 1, column: Qty in UnE, value: "500" }
+    click: { text: Quantity, role: tab, frame: app }
   - unless: "${initialStockDoc}"
-    fillCell: { row: 1, column: SLoc, value: 101A }
+    fill: { label: Qty in Unit of Entry, value: "500", frame: app }
   - unless: "${initialStockDoc}"
-    fillCell: { row: 1, column: Plnt, value: "1010" }
+    click: { text: Where, role: tab, frame: app }
   - unless: "${initialStockDoc}"
-    fillCell: { row: 2, column: Mat. Short Text, value: "S12-${grp}" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 2, column: Qty in UnE, value: "500" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 2, column: SLoc, value: 101A }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 2, column: Plnt, value: "1010" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 3, column: Mat. Short Text, value: "S13-${grp}" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 3, column: Qty in UnE, value: "500" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 3, column: SLoc, value: 101A }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 3, column: Plnt, value: "1010" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 4, column: Mat. Short Text, value: "R14-${grp}" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 4, column: Qty in UnE, value: "500" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 4, column: SLoc, value: 101C }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 4, column: Plnt, value: "1010" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 5, column: Mat. Short Text, value: "S15-${grp}" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 5, column: Qty in UnE, value: "1000" }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 5, column: SLoc, value: 101B }
-  - unless: "${initialStockDoc}"
-    fillCell: { row: 5, column: Plnt, value: "1010" }
+    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app }
   - unless: "${initialStockDoc}"
     press: Enter
+  - name: Next item
+    unless: "${initialStockDoc}"
+    click: { selector: "[title='Next Item']", frame: app }
   - unless: "${initialStockDoc}"
-    name: Pick plant 1010 if asked for storage location / plant
-    optional: true
-    timeout: 3000
-    selectRow: { contains: "1010", dialog: true }
+    click: { text: Material, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { label: Material, value: "S12-${grp}", enter: true, frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Quantity, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { label: Qty in Unit of Entry, value: "500", frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Where, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app }
+  - unless: "${initialStockDoc}"
+    press: Enter
+  - name: Next item
+    unless: "${initialStockDoc}"
+    click: { selector: "[title='Next Item']", frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Material, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { label: Material, value: "S13-${grp}", enter: true, frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Quantity, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { label: Qty in Unit of Entry, value: "500", frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Where, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { fields: { Plant: "1010", Storage Location: 101A }, frame: app }
+  - unless: "${initialStockDoc}"
+    press: Enter
+  - name: Next item
+    unless: "${initialStockDoc}"
+    click: { selector: "[title='Next Item']", frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Material, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { label: Material, value: "R14-${grp}", enter: true, frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Quantity, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { label: Qty in Unit of Entry, value: "500", frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Where, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { fields: { Plant: "1010", Storage Location: 101C }, frame: app }
+  - unless: "${initialStockDoc}"
+    press: Enter
+  - name: Next item
+    unless: "${initialStockDoc}"
+    click: { selector: "[title='Next Item']", frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Material, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { label: Material, value: "S15-${grp}", enter: true, frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Quantity, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { label: Qty in Unit of Entry, value: "1000", frame: app }
+  - unless: "${initialStockDoc}"
+    click: { text: Where, role: tab, frame: app }
+  - unless: "${initialStockDoc}"
+    fill: { fields: { Plant: "1010", Storage Location: 101B }, frame: app }
+  - unless: "${initialStockDoc}"
+    press: Enter
   - unless: "${initialStockDoc}"
     click: Post
   - unless: "${initialStockDoc}"

@@ -83,33 +83,78 @@ steps:
     fillCell: { within: Bidders, row: 1, column: Supplier, value: "10300002" }
   - unless: "${rfqExists}"
     click: { text: Create, index: -1 }
-  - unless: "${rfqExists}"
-    click: Publish
-  - unless: "${rfqExists}"
-    expectMessage:
-        regex: "\\d{9,10}"
-        capture: { var: rfqNo, regex: "(\\d{9,10})" }
+  - name: Close the output warnings (sender e-mail domain)
+    optional: true
+    timeout: 10000
+    click: { text: Close, dialog: true }
+  - name: RFQ number (shown under the description)
+    unless: "${rfqExists}"
+    capture: { var: rfqNo, from: text, selector: body, regex: "Request for Price ${grp}\\s+(\\d{9,10})" }
 
-  # 2. Quotations from both bidders
+  # Publish (also an RFQ saved by an earlier attempt that stopped before publishing)
+  - when: "${rfqExists}"
+    openRow: "Request for Price ${grp}"
+  - name: Publish (not offered once published)
+    optional: true
+    timeout: 10000
+    click: { text: Publish, role: button }
+  - name: Close the output warnings
+    optional: true
+    timeout: 10000
+    click: { text: Close, dialog: true }
+  - expectText: Published
+
+  # 2. Quotations from both bidders (a bidder that has one already is skipped)
   - openApp: { title: Manage RFQs }
   - fill: { label: Search, value: "${rfqNo}", enter: true }
+  - click: Go
   - openRow: ${rfqNo}
-  - click: { text: Bidders, role: tab }
-  - selectRow: IEE2E-${grp}
-  - click: Create Quotation
-  - click: { text: Items, role: tab }
-  - fillCell: { within: Items, rowContains: "R124-${grp}", column: Net Order Price, value: "${num(9.50)}" }
-  - click: Create
-  - click: Back
-  - selectRow: "10300002"
-  - click: Create Quotation
-  - click: { text: Items, role: tab }
-  - fillCell: { within: Items, rowContains: "R124-${grp}", column: Net Order Price, value: "11" }
-  - click: Create
-  - click: Back
   - click: { text: Quotations, role: tab }
-  - expectText: IEE2E-${grp}
-  - expectText: "10300002"
+  - detect: { row: "IEE2E-${grp}", var: quote1Exists, within: Quotations, timeout: 8000 }
+  - detect: { row: "10300002", var: quote2Exists, within: Quotations, timeout: 3000 }
+  - unless: "${quote1Exists}"
+    click: { text: Bidders, role: tab }
+  - unless: "${quote1Exists}"
+    selectRow: { contains: "IEE2E-${grp}", within: Bidders }
+  - unless: "${quote1Exists}"
+    click: Create Quotation
+  - unless: "${quote1Exists}"
+    click: { text: Items, role: tab }
+  - unless: "${quote1Exists}"
+    screenshot: quotation-items
+  - unless: "${quote1Exists}"
+    fillCell: { within: Items, row: 1, column: Net Order Price, value: "${num(9.50)}" }
+  - unless: "${quote1Exists}"
+    click: { text: [Submit, Create], index: -1 }
+  - unless: "${quote1Exists}"
+    optional: true
+    timeout: 8000
+    click: { text: Close, dialog: true }
+  - unless: "${quote1Exists}"
+    click: Back
+
+  - unless: "${quote2Exists}"
+    click: { text: Bidders, role: tab }
+  - unless: "${quote2Exists}"
+    selectRow: { contains: "10300002", within: Bidders }
+  - unless: "${quote2Exists}"
+    click: Create Quotation
+  - unless: "${quote2Exists}"
+    click: { text: Items, role: tab }
+  - unless: "${quote2Exists}"
+    fillCell: { within: Items, row: 1, column: Net Order Price, value: "11" }
+  - unless: "${quote2Exists}"
+    click: { text: [Submit, Create], index: -1 }
+  - unless: "${quote2Exists}"
+    optional: true
+    timeout: 8000
+    click: { text: Close, dialog: true }
+  - unless: "${quote2Exists}"
+    click: Back
+
+  - click: { text: Quotations, role: tab }
+  - expectText: { text: "IEE2E-${grp}", within: Quotations }
+  - expectText: { text: "10300002", within: Quotations }
 
   # 3. Compare and award
   - openApp: { title: Compare Supplier Quotations }

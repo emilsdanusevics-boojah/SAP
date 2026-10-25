@@ -102,29 +102,15 @@ steps:
   - name: Incoterms FH (by id; the label also matches the Incoterms field group title)
     unless: "${flcu01Exists}"
     fill: { selector: "input[id*='Incoterms'][id$='-input-inner']:not([id*='Version']):not([id*='Location'])", value: FH }
-  - unless: "${flcu01Exists}"
-    click: Apply
-  - unless: "${flcu01Exists}"
-    click: { text: [Tax Categories, Tax Classifications], role: tab }
-  - unless: "${flcu01Exists}"
-    screenshot: tax-categories
-  - name: Germany proposed already (from the sales organization)?
+  - name: Taxes of the sales area (Germany / TTX1 is proposed from the sales organization)
     unless: "${flcu01Exists}"
-    detect: { row: Germany, var: taxDE, within: Tax Categories | Tax Classifications, timeout: 10000 }
-  - name: Otherwise add a Germany / TTX1 row
-    unless: "${flcu01Exists}${taxDE}"
-    click: { text: Create, within: Tax Categories | Tax Classifications }
-  - unless: "${flcu01Exists}${taxDE}"
-    fillCell: { within: Tax Categories | Tax Classifications, row: 1, column: [Country/Region, Country], value: DE }
-  - unless: "${flcu01Exists}${taxDE}"
-    fillCell: { within: Tax Categories | Tax Classifications, row: 1, column: Tax Category, value: TTX1 }
-  - name: Tax classification 1 in the new row
-    unless: "${flcu01Exists}${taxDE}"
-    fillCell: { within: Tax Categories | Tax Classifications, row: 1, column: Tax Classification, value: "1" }
+    click: { text: Taxes, role: tab }
   - name: Tax classification 1 for Germany
     unless: "${flcu01Exists}"
-    when: "${taxDE}"
-    fillCell: { within: Tax Categories | Tax Classifications, rowContains: Germany, column: Tax Classification, value: "1" }
+    fillCell: { within: Taxes, rowContains: Germany, column: Tax Classification, value: "1" }
+  - name: Back from the sales area to the role
+    unless: "${flcu01Exists}"
+    click: Apply
   - name: Back from the role to the business partner
     unless: "${flcu01Exists}"
     click: Apply

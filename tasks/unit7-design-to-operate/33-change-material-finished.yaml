@@ -19,6 +19,14 @@ steps:
   - fill: { label: Plant, value: "1010", dialog: true }
   - press: Enter
   - fill: { Strategy Group: "40" }
-  - press: Enter
-  - click: Save
+  - name: Enter on the last selected view asks whether to save
+    press: Enter
+  - name: Save (Yes in "Last data screen reached")
+    optional: true
+    timeout: 10000
+    click: { text: "Yes", dialog: true }
+  - name: Save button (when no dialog came up)
+    optional: true
+    timeout: 5000
+    click: Save
   - expectMessage: { regex: "changed|saved|no changes|not changed" }
