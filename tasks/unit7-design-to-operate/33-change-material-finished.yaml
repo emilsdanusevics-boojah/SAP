@@ -3,17 +3,22 @@ exercise: 33
 title: "Change Product Master Record for Finished Product (strategy 40)"
 tags: [unit7, pp, master-data, gui]
 description: |
-  Changes F1-### from make-to-order to make-to-stock (strategy group 20 -> 40).
+  Changes F1-### from make-to-order to make-to-stock (strategy group 20 -> 40). Change Material is
+  the classic GUI transaction MM02; saving an unchanged material only reports that nothing changed.
   The guide warns not to do this while a parallel Controlling training uses the system.
 steps:
   - openApp: { title: Change Material }
   - fill: { label: Material, value: "F1-${grp}", enter: true }
+  - name: MRP 3 in the visible part of the view list?
+    detect: { row: MRP 3, var: mrp3Visible, dialog: true, timeout: 10000 }
+  - name: Scroll the view list (the GUI renders only the visible rows)
+    unless: "${mrp3Visible}"
+    press: PageDown
   - selectRow: { contains: MRP 3, dialog: true }
   - press: Enter
   - fill: { label: Plant, value: "1010", dialog: true }
   - press: Enter
-  - click: { text: MRP 3, role: tab }
   - fill: { Strategy Group: "40" }
   - press: Enter
   - click: Save
-  - expectMessage: { regex: "changed|saved" }
+  - expectMessage: { regex: "changed|saved|no changes|not changed" }

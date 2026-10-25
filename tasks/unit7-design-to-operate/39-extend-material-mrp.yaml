@@ -3,12 +3,22 @@ exercise: 39
 title: "Extend Product Master R124-### for MRP"
 tags: [unit7, pp, master-data, gui]
 requires: [IEE2E-23]
+description: >
+  Create Material (MM01) extends the existing R124-### by the MRP views. When they exist already the
+  GUI reports the material as fully maintained and nothing is saved.
 steps:
   - openApp: { title: Create Material }
   - fill: { label: Material, value: "R124-${grp}" }
   - press: Enter
   - name: Confirm "material already exists" warning
+    optional: true
+    timeout: 5000
     press: Enter
+  - name: MRP 1 in the visible part of the view list?
+    detect: { row: MRP 1, var: mrpVisible, dialog: true, timeout: 10000 }
+  - name: Scroll the view list (the GUI renders only the visible rows)
+    unless: "${mrpVisible}"
+    press: PageDown
   - selectRow: { contains: [MRP 1, MRP 2, MRP 3], dialog: true }
   - press: Enter
   - fill:
@@ -17,20 +27,32 @@ steps:
         Plant: "1010"
         Stor. Loc. | Storage Location: 101B
   - press: Enter
-  - fill:
+  - name: MRP views there already?
+    detect: { text: [fully maintained, already maintained], var: mrpDone, timeout: 8000 }
+  - unless: "${mrpDone}"
+    fill:
       MRP Type: PD
       MRP Controller: "001"
       Lot Sizing Procedure | Lot size: FX
       Fixed Lot Size: "100"
-  - press: Enter
-  - click: { text: MRP 2, role: tab }
-  - fill:
+  - unless: "${mrpDone}"
+    press: Enter
+  - unless: "${mrpDone}"
+    click: { text: MRP 2, role: tab }
+  - unless: "${mrpDone}"
+    fill:
       Planned Deliv. Time | Planned Delivery Time | Planned Delivery Time in Days: "10"
       Safety Stock: "50"
-  - press: Enter
-  - click: { text: MRP 3, role: tab }
-  - fill:
+  - unless: "${mrpDone}"
+    press: Enter
+  - unless: "${mrpDone}"
+    click: { text: MRP 3, role: tab }
+  - unless: "${mrpDone}"
+    fill:
       Availability Check: SR
-  - press: Enter
-  - click: Save
-  - expectMessage: { regex: "created|changed|extended" }
+  - unless: "${mrpDone}"
+    press: Enter
+  - unless: "${mrpDone}"
+    click: Save
+  - unless: "${mrpDone}"
+    expectMessage: { regex: "created|changed|extended" }

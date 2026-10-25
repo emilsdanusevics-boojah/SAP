@@ -9,9 +9,9 @@ steps:
   - unless: "${initialStockDoc}"
     openApp: { title: Post Goods Movement }
   - unless: "${initialStockDoc}"
-    select: { combobox: 0, value: Goods Receipt }
+    select: { combobox: 0, value: Goods Receipt, frame: app }
   - unless: "${initialStockDoc}"
-    select: { combobox: 1, value: Other }
+    select: { combobox: 1, value: Other, frame: app }
   - unless: "${initialStockDoc}"
     fillCell: { row: 1, column: Mat. Short Text, value: "S11-${grp}" }
   - unless: "${initialStockDoc}"

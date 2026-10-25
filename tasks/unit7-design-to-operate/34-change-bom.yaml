@@ -3,6 +3,9 @@ exercise: 34
 title: "Change BOM for Semi-Finished Product S12-### (add lock)"
 tags: [unit7, pp, master-data, gui]
 requires: [IEE2E-23]
+description: >
+  Change Bill of Material is the classic GUI transaction CS02. Item 0040 (R124-###) is not added
+  again when the BOM lists it already.
 steps:
   - openApp: { title: Change Bill of Material }
   - fill:
@@ -12,9 +15,20 @@ steps:
       Alternative BOM | Alternative: "1"
       Valid From: ${monthStart}
   - press: Enter
-  - fillCell: { firstEmpty: true, column: Item, value: "0040" }
-  - fillCell: { rowContains: "0040", column: ICt, value: L }
-  - fillCell: { rowContains: "0040", column: Component, value: "R124-${grp}" }
-  - fillCell: { rowContains: "0040", column: Quantity, value: "1", enter: true }
-  - click: Save
-  - expectMessage: { regex: "changed|saved" }
+  - name: R124-${grp} in the BOM already?
+    detect: { text: "R124-${grp}", var: lockInBom, timeout: 10000 }
+  - unless: "${lockInBom}"
+    fillCell: { firstEmpty: true, column: Item, value: "0040" }
+  - unless: "${lockInBom}"
+    fillCell: { rowContains: "0040", column: ICt, value: L }
+  - unless: "${lockInBom}"
+    fillCell: { rowContains: "0040", column: Component, value: "R124-${grp}" }
+  - unless: "${lockInBom}"
+    fillCell: { rowContains: "0040", column: Quantity, value: "1", enter: true }
+  - unless: "${lockInBom}"
+    click: Save
+  - unless: "${lockInBom}"
+    expectMessage: { regex: "changed|saved" }
+  - name: Leave without changes
+    when: "${lockInBom}"
+    screenshot: bom
